@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "providerId": "codex",
+  "displayName": "Codex",
+  "account": null,
+  "status": "ACTIVE",
+  "lastUpdated": "2030-01-02T03:04:05Z",
+  "stale": false,
+  "headlineWindowId": "five-hour",
+  "windows": [
+    {
+      "id": "five-hour",
+      "name": "Five-hour limit",
+      "usedPercent": 42,
+      "remainingPercent": 58,
+      "resetAt": "2030-01-02T05:00:00Z",
+      "durationMinutes": 300,
+      "fidelity": "OFFICIAL"
+    }
+  ],
+  "message": null
+}

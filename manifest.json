@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "ai-usage.notch",
+  "name": "Omarchy AI Usage",
+  "version": "0.7.0",
+  "author": "Omarchy AI Usage contributors",
+  "license": "MIT",
+  "description": "A native edge-attached AI quota surface for Omarchy.",
+  "kinds": [
+    "service"
+  ],
+  "entryPoints": {
+    "service": "src/Main.qml"
+  }
+}

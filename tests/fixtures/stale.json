@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "providerId": "codex",
+  "displayName": "Codex",
+  "account": null,
+  "status": "STALE",
+  "lastUpdated": "2030-01-02T03:04:05Z",
+  "stale": true,
+  "headlineWindowId": "five-hour",
+  "windows": [
+    {
+      "id": "five-hour",
+      "name": "Five-hour limit",
+      "usedPercent": 42,
+      "remainingPercent": 58,
+      "resetAt": null,
+      "durationMinutes": 300,
+      "fidelity": "OFFICIAL"
+    }
+  ],
+  "message": "Showing the last successful refresh."
+}

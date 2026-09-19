@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "providerId": "codex",
+  "displayName": "Codex",
+  "account": null,
+  "status": "UNAVAILABLE",
+  "lastUpdated": null,
+  "stale": false,
+  "headlineWindowId": null,
+  "windows": [],
+  "message": "Codex is not available."
+}

@@ -29,7 +29,7 @@ QtObject {
       "showPercentage": true,
       "showResetTimer": true,
       "animations": true,
-      "enabledProviders": { "codex": true }
+      "enabledProviders": { "claude": true, "codex": true }
     }
   }
 
@@ -68,6 +68,9 @@ QtObject {
       "showResetTimer": raw.showResetTimer === undefined ? base.showResetTimer : raw.showResetTimer === true,
       "animations": raw.animations === undefined ? base.animations : raw.animations === true,
       "enabledProviders": {
+        "claude": providers.claude === false
+          ? false
+          : (!plainObject(providers.claude) || providers.claude.enabled !== false),
         "codex": providers.codex === false
           ? false
           : (!plainObject(providers.codex) || providers.codex.enabled !== false)

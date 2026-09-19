@@ -8,7 +8,7 @@ PanelWindow {
   property var targetScreen: null
   property string edge: "right"
   property real edgeOffset: 0.5
-  property var snapshot: null
+  property var snapshots: []
   property bool providerReady: false
   property bool loading: false
   property bool previewMode: false
@@ -40,7 +40,7 @@ PanelWindow {
     ? providers[hoveredIndex]
     : null
 
-  signal refreshRequested()
+  signal refreshRequested(string providerId)
   signal preferenceChanged(string key, var value)
 
   function headlineWindow(value) {
@@ -64,15 +64,21 @@ PanelWindow {
   }
 
   function liveProviders() {
-    var current = root.snapshot
-    var status = current ? String(current.status || "UNAVAILABLE") : "UNAVAILABLE"
-    return [{
-      "id": "codex",
-      "displayName": current ? String(current.displayName || "Codex") : "Codex",
-      "usedPercent": root.windowUsed(root.headlineWindow(current)),
-      "stale": status === "STALE" || status === "ERROR" || status === "UNAVAILABLE",
-      "snapshot": current
-    }]
+    var result = []
+    var currentSnapshots = Array.isArray(root.snapshots) ? root.snapshots : []
+    for (var i = 0; i < currentSnapshots.length; i++) {
+      var current = currentSnapshots[i]
+      if (!current) continue
+      var status = String(current.status || "UNAVAILABLE")
+      result.push({
+        "id": String(current.providerId || ""),
+        "displayName": String(current.displayName || current.providerId || "AI"),
+        "usedPercent": root.windowUsed(root.headlineWindow(current)),
+        "stale": status === "STALE" || status === "ERROR" || status === "UNAVAILABLE",
+        "snapshot": current
+      })
+    }
+    return result
   }
 
   function previewProviders() {
@@ -248,7 +254,9 @@ PanelWindow {
       }
     }
     onProviderActivated: function(index) {
-      if (!root.previewMode && index === 0) root.refreshRequested()
+      if (!root.previewMode && index >= 0 && index < root.providers.length) {
+        root.refreshRequested(String(root.providers[index].id || ""))
+      }
     }
     onBodyActivated: {
       root.heldOpen = !root.heldOpen

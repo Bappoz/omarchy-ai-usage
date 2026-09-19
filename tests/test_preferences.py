@@ -46,6 +46,8 @@ class PreferenceTests(unittest.TestCase):
 
     def test_settings_cover_release_behavior_without_provider_credentials(self) -> None:
         for label in (
+            "Claude",
+            "Codex",
             "Screen edge",
             "Position",
             "Display",
@@ -61,6 +63,8 @@ class PreferenceTests(unittest.TestCase):
                 self.assertIn(label, self.settings)
         for forbidden in ("token", "password", "secret", "apiKey"):
             self.assertNotIn(forbidden, self.settings)
+        self.assertIn('"claude": true, "codex": true', self.preferences)
+        self.assertIn('preferenceChanged("enabledProviders", next)', self.settings)
 
     def test_reduced_motion_override_disables_all_surface_motion(self) -> None:
         self.assertIn('Quickshell.env("OMARCHY_REDUCED_MOTION") !== "1"', self.window)

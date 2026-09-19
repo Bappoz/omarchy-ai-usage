@@ -76,8 +76,7 @@ Item {
   ProviderStore {
     id: providerStore
     pollingIntervalSeconds: root.preferenceValues.pollingInterval || 900
-    providerEnabled: !root.preferenceValues.enabledProviders
-      || root.preferenceValues.enabledProviders.codex !== false
+    enabledProviders: root.preferenceValues.enabledProviders || ({ "claude": true, "codex": true })
   }
 
   Preferences {
@@ -96,11 +95,11 @@ Item {
       edge: root.edge
       edgeOffset: root.edgeOffset
       preferences: root.preferenceValues
-      snapshot: providerStore.snapshot
+      snapshots: providerStore.snapshots
       providerReady: providerStore.ready
       loading: providerStore.loading
       previewMode: providerStore.previewMode
-      onRefreshRequested: providerStore.refresh()
+      onRefreshRequested: function(providerId) { providerStore.refresh(providerId) }
       onPreferenceChanged: function(key, value) { preferenceStore.update(key, value) }
     }
   }

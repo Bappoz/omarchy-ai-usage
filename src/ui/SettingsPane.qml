@@ -28,7 +28,10 @@ Column {
 
   function rows() {
     var p = preferences || ({})
+    var providers = p.enabledProviders || ({})
     return [
+      { key: "providerClaude", label: "Claude", value: providers.claude === false ? "Off" : "On" },
+      { key: "providerCodex", label: "Codex", value: providers.codex === false ? "Off" : "On" },
       { key: "edge", label: "Screen edge", value: title(p.edge || "right") },
       { key: "offset", label: "Position", value: Math.round(Number(p.offset === undefined ? 0.5 : p.offset) * 100) + "%" },
       { key: "monitor", label: "Display", value: p.monitor === "all" ? "All" : (p.monitor === "focused" ? "Focused" : String(p.monitor || "Focused")) },
@@ -44,7 +47,17 @@ Column {
 
   function activate(key) {
     var p = preferences || ({})
-    if (key === "edge") preferenceChanged(key, nextIn(["right", "bottom", "left", "top"], p.edge))
+    if (key === "providerClaude" || key === "providerCodex") {
+      var providerId = key === "providerClaude" ? "claude" : "codex"
+      var otherId = providerId === "claude" ? "codex" : "claude"
+      var current = p.enabledProviders || ({})
+      var currentlyEnabled = current[providerId] !== false
+      if (currentlyEnabled && current[otherId] === false) return
+      var next = ({ "claude": current.claude !== false, "codex": current.codex !== false })
+      next[providerId] = !currentlyEnabled
+      preferenceChanged("enabledProviders", next)
+    }
+    else if (key === "edge") preferenceChanged(key, nextIn(["right", "bottom", "left", "top"], p.edge))
     else if (key === "offset") preferenceChanged(key, nextIn([0.25, 0.5, 0.75], Number(p.offset)))
     else if (key === "monitor") preferenceChanged(key, p.monitor === "all" ? "focused" : "all")
     else if (key === "size") preferenceChanged(key, nextIn(["small", "medium", "large"], p.size))

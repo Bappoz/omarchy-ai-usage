@@ -14,10 +14,11 @@ class CompactUiTests(unittest.TestCase):
         fixture = json.loads((ROOT / "src" / "fixtures" / "compact-active.json").read_text())
         validate_snapshot(fixture)
 
-    def test_service_uses_one_global_live_provider_poll_timer(self) -> None:
+    def test_service_uses_one_bounded_runner_per_live_provider(self) -> None:
         source = "\n".join(path.read_text() for path in sorted((ROOT / "src").rglob("*.qml")))
-        provider = (ROOT / "src" / "model" / "ProviderStore.qml").read_text()
+        provider = (ROOT / "src" / "model" / "ProviderRunner.qml").read_text()
         self.assertIn("codex_provider.py", source)
+        self.assertIn("claude_provider.py", source)
         self.assertNotIn("account/rateLimits/read", source)
         self.assertIn("Process {", source)
         self.assertEqual(provider.count("property Timer pollTimer: Timer {"), 1)
@@ -47,7 +48,7 @@ class CompactUiTests(unittest.TestCase):
                 self.assertIn(f'root.status === "{status}"', source)
 
     def test_refresh_is_scheduled_and_single_flight(self) -> None:
-        source = (ROOT / "src" / "model" / "ProviderStore.qml").read_text()
+        source = (ROOT / "src" / "model" / "ProviderRunner.qml").read_text()
         self.assertIn("if (providerProcess.running) {", source)
         self.assertIn("root.refreshPending = true", source)
         self.assertIn('providerProcess.command = ["python3", root.helperPath]', source)
@@ -92,7 +93,15 @@ class CompactUiTests(unittest.TestCase):
         self.assertIn('{ "id": "codex", "displayName": "Codex", "usedPercent": 21', window)
         self.assertIn('{ "id": "perplexity", "displayName": "Perplexity", "usedPercent": 52', window)
         self.assertIn('"usedPercent": 73', window)
-        self.assertIn('return [{\n      "id": "codex"', window)
+        self.assertIn("var currentSnapshots = Array.isArray(root.snapshots)", window)
+        self.assertIn('"id": String(current.providerId || "")', window)
+
+    def test_settings_icon_is_a_local_vector_not_an_emoji(self) -> None:
+        card = (ROOT / "src" / "ui" / "ExpandedCard.qml").read_text()
+        icon = ROOT / "src" / "assets" / "icons" / "settings.svg"
+        self.assertTrue(icon.is_file())
+        self.assertIn('source: "../assets/icons/settings.svg"', card)
+        self.assertNotIn('"⚙"', card)
 
     def test_reference_glyphs_are_local_vector_assets(self) -> None:
         glyph = (ROOT / "src" / "ui" / "ProviderGlyph.qml").read_text()

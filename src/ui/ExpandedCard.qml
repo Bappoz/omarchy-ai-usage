@@ -181,12 +181,21 @@ Item {
         radius: 8 * root.uiScale
         color: settingsMouse.containsMouse || root.settingsOpen ? "#202020" : "transparent"
 
-        Text {
+        Image {
           anchors.centerIn: parent
-          text: root.settingsOpen ? "×" : "⚙"
-          color: "#a0a0a0"
-          font.family: "sans-serif"
-          font.pixelSize: (root.settingsOpen ? 16 : 12) * root.uiScale
+          width: 14 * root.uiScale
+          height: 14 * root.uiScale
+          source: "../assets/icons/settings.svg"
+          sourceSize.width: Math.round(width * 2)
+          sourceSize.height: Math.round(height * 2)
+          opacity: settingsMouse.containsMouse || root.settingsOpen ? 1 : 0.62
+          rotation: root.settingsOpen ? 90 : 0
+          Behavior on rotation {
+            NumberAnimation { duration: root.animationsEnabled ? 180 : 0; easing.type: Easing.OutCubic }
+          }
+          Behavior on opacity {
+            NumberAnimation { duration: root.animationsEnabled ? 120 : 0 }
+          }
         }
 
         MouseArea {

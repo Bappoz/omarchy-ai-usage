@@ -19,7 +19,7 @@ The in-card settings control covers the common choices. The normalized configura
   "showPercentage": true,
   "showResetTimer": true,
   "animations": true,
-  "enabledProviders": { "codex": true }
+  "enabledProviders": { "claude": true, "codex": true }
 }
 ```
 
@@ -33,7 +33,7 @@ The in-card settings control covers the common choices. The normalized configura
 - `expandBehavior`: `hover` or `click`. With `autoHide: false`, the provider rail remains open.
 - `pollingInterval`: seconds, clamped to 60–3600; the UI offers 5, 15, 30, and 60 minutes.
 - `showProviderLabel`, `showPercentage`, `showResetTimer`, `animations`: boolean presentation choices.
-- `enabledProviders.codex`: boolean provider switch reserved for forward-compatible provider management.
+- `enabledProviders.claude` and `enabledProviders.codex`: provider switches also exposed in the card. The UI keeps at least one enabled.
 
 Malformed, missing, and out-of-range values fall back to safe defaults. Unknown fields are discarded when the plugin next writes its normalized preferences. `settingsVersion` reserves an explicit migration point for future releases.
 

@@ -29,7 +29,7 @@ At rest, the expanded geometry folds into a small black handle. The provider cel
 
 ## Data honesty
 
-The normal service renders only the live Codex snapshot. Claude and Perplexity appear together with Codex only when `OMARCHY_AI_USAGE_PREVIEW=1` is explicitly enabled; the tooltip labels that state `PREVIEW`. Their reference percentages are never used as a live fallback.
+The normal service renders live Claude and Codex snapshots. Perplexity appears only when `OMARCHY_AI_USAGE_PREVIEW=1` is explicitly enabled; the tooltip labels that state `PREVIEW`. Reference percentages are never used as a live fallback.
 
 The provider contract continues to keep both `usedPercent` and `remainingPercent` explicit. Presentation now uses `usedPercent` everywhere to match CodeNotch without changing or weakening the normalized data boundary.
 

@@ -21,7 +21,7 @@ The body uses one canonical right-edge path and transforms it onto left, top, or
 
 At rest the surface is a small black handle attached to the selected edge. Reaching its enlarged input target unfolds the full provider rail. Hovering a provider opens its details; a 250 ms grace window allows the pointer to cross the small gap into the tooltip without closing it.
 
-Clicking a real Codex ring requests a refresh. Clicking unused notch space holds or releases the open state. The full-screen layer remains click-through outside the dynamic notch, tooltip, and narrow pointer bridge.
+Clicking a real provider ring requests a refresh for that provider. Clicking unused notch space holds or releases the open state. The full-screen layer remains click-through outside the dynamic notch, tooltip, and narrow pointer bridge.
 
 ## Usage semantics
 
@@ -31,4 +31,4 @@ Unknown values render as an em dash and a neutral track. Stale data remains visi
 
 ## Preview
 
-Normal startup shows the one implemented provider, Codex. `OMARCHY_AI_USAGE_PREVIEW=1` is an explicit visual test mode that renders the reference trio—Claude 73%, Codex 21%, and Perplexity 52%—and marks the expanded card `PREVIEW`.
+Normal startup shows enabled live providers—Claude and Codex by default. `OMARCHY_AI_USAGE_PREVIEW=1` is an explicit visual test mode that renders the reference trio—Claude 73%, Codex 21%, and Perplexity 52%—and marks the expanded card `PREVIEW`.

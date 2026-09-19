@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.0
+
+- Add live Claude Code usage through Omarchy's authenticated collector.
+- Auto-enable Claude and Codex, with no-code provider switches in the in-card settings.
+- Isolate polling, retries, and stale fallback per provider so one failure does not hide the other.
+- Replace the settings emoji with a local animated vector control.
+- Add marketplace-ready preview and installation, update, removal, and submission guidance.
+
 ## 0.7.0
 
 - Add native persisted preferences for placement, displays, size, behavior, polling, labels, reset times, and motion.

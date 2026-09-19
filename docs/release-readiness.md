@@ -1,26 +1,25 @@
 # Release readiness
 
-Version 0.7.0 completes the pre-marketplace engineering scope. It is suitable for daily testing and publication as an open-source repository.
+Version 0.8.0 completes the repository's pre-marketplace engineering scope.
 
 ## Completed gates
 
-- official schema-version-1 Omarchy service manifest;
+- valid schema-version-1 Omarchy service manifest;
+- live Claude Code and Codex support through existing authenticated sessions;
 - no symlinks, vendored runtimes, or network-fetched UI assets;
-- one global provider store and poll scheduler across all displays;
-- timeout, output cap, retry backoff, rate-limit delay, and last-good fallback;
-- plugin-scoped persisted preferences with bounded normalization;
+- isolated provider schedules with timeouts, output caps, backoff, and private stale fallback;
+- plugin-scoped persisted preferences with in-card provider switches;
 - reduced-motion override and keyboard accessibility metadata;
 - synthetic fixtures only, with secret-like fields rejected in tests;
-- MIT license plus pinned third-party attribution;
-- portable CI and local QML/platform validation;
-- documentation for configuration, architecture, security, contribution, and release changes.
+- MIT license, third-party attribution, root preview, CI, and removal instructions;
+- local QML, Python, contract, and official Omarchy validation.
 
 ## Before a public tag
 
 1. Run `make check` on the clean tagged tree under the target Omarchy release.
 2. Install from the public Git URL on a disposable or secondary profile.
-3. Exercise hover, click, always-open, all four edges, reconnect, scale, offline, signed-out, and stale-cache scenarios.
-4. Confirm the screenshot still contains only synthetic preview data.
-5. Tag `v0.7.0` and attach the validation output to the release notes.
+3. Exercise both providers, settings, all four edges, offline, signed-out, and stale-cache states.
+4. Confirm screenshots contain no account identity or real provider payload.
+5. Tag `v0.8.0` and attach the validation result to the release notes.
 
-Marketplace packaging, listing metadata, submission, and review are intentionally not performed or prepared here; they begin only after the owner accepts the daily-use test.
+The marketplace submission flow is documented in [Marketplace publishing](marketplace-publishing.md). Submission remains an explicit repository-owner action because it creates a public issue for maintainer review.

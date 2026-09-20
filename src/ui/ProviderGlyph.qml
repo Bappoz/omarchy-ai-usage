@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 
 Item {
   id: root
@@ -14,6 +15,7 @@ Item {
   }
 
   Image {
+    id: glyphImage
     anchors.centerIn: parent
     width: parent.width * root.opticalScale
     height: parent.height * root.opticalScale
@@ -23,5 +25,15 @@ Item {
     fillMode: Image.PreserveAspectFit
     smooth: true
     mipmap: true
+    visible: root.providerId !== "claude"
+    layer.enabled: root.providerId === "claude"
+  }
+
+  MultiEffect {
+    anchors.fill: glyphImage
+    source: glyphImage
+    visible: root.providerId === "claude"
+    colorization: 1.0
+    colorizationColor: "#D97757"
   }
 }

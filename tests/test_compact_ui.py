@@ -113,6 +113,11 @@ class CompactUiTests(unittest.TestCase):
                 self.assertIn('<path fill="#fff"', asset.read_text())
         self.assertNotIn("https://", glyph)
 
+    def test_claude_glyph_uses_official_brand_orange(self) -> None:
+        glyph = (ROOT / "src" / "ui" / "ProviderGlyph.qml").read_text()
+        self.assertIn('colorizationColor: "#D97757"', glyph)
+        self.assertIn('visible: root.providerId === "claude"', glyph)
+
     def test_reference_motion_vocabulary_is_present(self) -> None:
         compact = (ROOT / "src" / "ui" / "CompactNotch.qml").read_text()
         window = (ROOT / "src" / "ui" / "EdgeWindow.qml").read_text()

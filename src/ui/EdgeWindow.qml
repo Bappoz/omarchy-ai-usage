@@ -122,7 +122,8 @@ PanelWindow {
   }
 
   function scheduleClose() {
-    if (!root.hoverExpansion || root.forcedOpen || root.heldOpen || root.settingsOpen) return
+    if (!root.autoHide || root.forcedOpen) return
+    if (!root.settingsOpen && (!root.hoverExpansion || root.heldOpen)) return
     hoverGrace.restart()
   }
 
@@ -214,6 +215,10 @@ PanelWindow {
     repeat: false
     onTriggered: {
       if (root.hoveringSurface || root.hoveringProvider || root.hoveringCard) return
+      if (root.settingsOpen) {
+        root.settingsOpen = false
+        root.heldOpen = false
+      }
       root.hoveredIndex = -1
     }
   }
@@ -294,7 +299,7 @@ PanelWindow {
     onSettingsRequested: {
       root.settingsOpen = !root.settingsOpen
       if (root.settingsOpen) {
-        root.heldOpen = true
+        root.heldOpen = false
         if (root.hoveredIndex < 0 && root.providers.length > 0) root.hoveredIndex = 0
       }
     }

@@ -1,19 +1,24 @@
 from __future__ import annotations
 
+import json
 import os
 import stat
+import subprocess
 import sys
 import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 from test_contract import validate_snapshot
 
 from helpers.claude_provider import (
     ProviderError,
     build_collector_command,
+    build_updater_command,
     collect_claude,
+    collect_shared_claude,
     normalize_claude_payload,
     refresh_provider,
 )
@@ -38,6 +43,41 @@ def collect(scenario: str, timeout: float = 1.0) -> dict:
 class ClaudeProviderTests(unittest.TestCase):
     def test_fixed_command_uses_limits_only(self) -> None:
         self.assertEqual(build_collector_command("/collector"), ["/collector", "--limits-only"])
+
+    def test_shared_updater_targets_only_claude_limits(self) -> None:
+        self.assertEqual(
+            build_updater_command("/updater"),
+            ["/updater", "--limits-only", "claude"],
+        )
+
+    def test_shared_record_is_read_after_official_update(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            shared = Path(directory) / "claude.json"
+            payload = collect("active")
+
+            def fake_run(*args, **kwargs):
+                shared.write_text(json.dumps(payload), encoding="utf-8")
+                return subprocess.CompletedProcess(args[0], 0)
+
+            with patch("helpers.claude_provider.subprocess.run", side_effect=fake_run) as run:
+                result = collect_shared_claude(["/updater", "--limits-only", "claude"], shared)
+
+            self.assertEqual(result["id"], "claude")
+            self.assertEqual(run.call_args.args[0], ["/updater", "--limits-only", "claude"])
+            self.assertFalse(run.call_args.kwargs["shell"])
+
+    def test_shared_record_rejects_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "target.json"
+            target.write_text("{}", encoding="utf-8")
+            shared = Path(directory) / "claude.json"
+            shared.symlink_to(target)
+            completed = subprocess.CompletedProcess(["/updater"], 0)
+            with (
+                patch("helpers.claude_provider.subprocess.run", return_value=completed),
+                self.assertRaises(ProviderError),
+            ):
+                collect_shared_claude(["/updater"], shared)
 
     def test_active_limits_are_normalized(self) -> None:
         snapshot = normalize_claude_payload(collect("active"), NOW)

@@ -25,6 +25,7 @@ DEFAULT_TIMEOUT_SECONDS = 15.0
 DEFAULT_MAX_OUTPUT_BYTES = 1_048_576
 DEFAULT_MAX_CACHE_AGE_SECONDS = 7 * 24 * 60 * 60
 DEFAULT_COLLECTOR = "/usr/share/omarchy/bin/omarchy-agent-usage-claude"
+DEFAULT_UPDATER = "/usr/share/omarchy/bin/omarchy-agent-usage-update"
 IDENTIFIER_PART = re.compile(r"[^a-z0-9._-]+")
 AUTH_STATUSES = {"waiting for auth", "sign-in expired"}
 
@@ -50,8 +51,30 @@ def default_cache_path() -> Path:
     return root / "omarchy-ai-usage" / "claude-last-good.json"
 
 
+def default_shared_usage_path() -> Path:
+    state_home = os.environ.get("XDG_STATE_HOME")
+    root = Path(state_home) if state_home else Path.home() / ".local" / "state"
+    return root / "omarchy" / "agents" / "usage" / "claude.json"
+
+
 def build_collector_command(collector: str) -> list[str]:
     return [collector, "--limits-only"]
+
+
+def build_updater_command(updater: str) -> list[str]:
+    return [updater, "--limits-only", PROVIDER_ID]
+
+
+def _parse_payload(raw: bytes) -> Mapping[str, Any]:
+    if len(raw) > DEFAULT_MAX_OUTPUT_BYTES:
+        raise ProviderError("ERROR", "Claude returned an unreadable response.")
+    try:
+        payload = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ProviderError("ERROR", "Claude returned an unreadable response.") from exc
+    if not isinstance(payload, Mapping):
+        raise ProviderError("ERROR", "Claude returned an unreadable response.")
+    return payload
 
 
 def collect_claude(
@@ -81,13 +104,52 @@ def collect_claude(
         raise ProviderError("ERROR", "Claude returned an unreadable response.")
     if completed.returncode != 0:
         raise ProviderError("ERROR", "Claude usage could not be refreshed.")
+    return _parse_payload(completed.stdout)
+
+
+def collect_shared_claude(
+    command: Sequence[str],
+    shared_usage_path: Path,
+    *,
+    timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+    max_output_bytes: int = DEFAULT_MAX_OUTPUT_BYTES,
+) -> Mapping[str, Any]:
+    """Refresh and read Omarchy's shared Claude record.
+
+    The official updater owns the on-disk record contract and performs an
+    atomic replacement. Keeping this work in the provider runner means the
+    shared state remains fresh even when the native agents widget is disabled.
+    """
     try:
-        payload = json.loads(completed.stdout)
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise ProviderError("ERROR", "Claude returned an unreadable response.") from exc
-    if not isinstance(payload, Mapping):
-        raise ProviderError("ERROR", "Claude returned an unreadable response.")
-    return payload
+        completed = subprocess.run(
+            list(command),
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=timeout_seconds,
+            check=False,
+            shell=False,
+        )
+    except FileNotFoundError as exc:
+        raise ProviderError("UNAVAILABLE", "Claude usage support is not available in this Omarchy version.") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise ProviderError("ERROR", "Claude did not respond before the refresh deadline.") from exc
+    except OSError as exc:
+        raise ProviderError("UNAVAILABLE", "Claude usage could not be started.") from exc
+
+    if completed.returncode != 0:
+        raise ProviderError("ERROR", "Claude usage could not be refreshed.")
+    try:
+        if shared_usage_path.is_symlink() or not shared_usage_path.is_file():
+            raise ProviderError("ERROR", "Claude usage could not be refreshed.")
+        if shared_usage_path.stat().st_size > max_output_bytes:
+            raise ProviderError("ERROR", "Claude returned an unreadable response.")
+        raw = shared_usage_path.read_bytes()
+    except ProviderError:
+        raise
+    except OSError as exc:
+        raise ProviderError("ERROR", "Claude usage could not be refreshed.") from exc
+    return _parse_payload(raw)
 
 
 def _empty_snapshot(status: str, message: str) -> dict[str, Any]:
@@ -333,6 +395,8 @@ def refresh_provider(
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--collector", help="Explicit Omarchy Claude collector path")
+    parser.add_argument("--updater", help="Explicit Omarchy usage updater path")
+    parser.add_argument("--shared-usage-path", type=Path, default=default_shared_usage_path())
     parser.add_argument("--cache-path", type=Path, default=default_cache_path())
     parser.add_argument("--no-cache", action="store_true")
     parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT_SECONDS)
@@ -345,12 +409,26 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.timeout <= 0 or args.max_cache_age < 0:
         print("timeout must be positive and max-cache-age cannot be negative", file=sys.stderr)
         return 2
-    collector = args.collector or (DEFAULT_COLLECTOR if Path(DEFAULT_COLLECTOR).is_file() else shutil.which("omarchy-agent-usage-claude"))
-    cache_path = None if args.no_cache else args.cache_path
-    if not collector:
-        fetch = lambda: (_ for _ in ()).throw(ProviderError("UNAVAILABLE", "Claude usage support is not available in this Omarchy version."))
+    if args.updater:
+        updater = args.updater
+        collector = None
+    elif args.collector:
+        updater = None
+        collector = args.collector
     else:
+        updater = DEFAULT_UPDATER if Path(DEFAULT_UPDATER).is_file() else shutil.which("omarchy-agent-usage-update")
+        collector = DEFAULT_COLLECTOR if Path(DEFAULT_COLLECTOR).is_file() else shutil.which("omarchy-agent-usage-claude")
+    cache_path = None if args.no_cache else args.cache_path
+    if updater:
+        fetch = lambda: collect_shared_claude(
+            build_updater_command(str(updater)),
+            args.shared_usage_path,
+            timeout_seconds=args.timeout,
+        )
+    elif collector:
         fetch = lambda: collect_claude(build_collector_command(str(collector)), timeout_seconds=args.timeout)
+    else:
+        fetch = lambda: (_ for _ in ()).throw(ProviderError("UNAVAILABLE", "Claude usage support is not available in this Omarchy version."))
     snapshot = refresh_provider(fetch, cache_path=cache_path, max_cache_age_seconds=args.max_cache_age)
     print(json.dumps(snapshot, ensure_ascii=False, separators=(",", ":")))
     return 0

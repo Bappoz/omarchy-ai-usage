@@ -26,6 +26,7 @@ Live mode supports Claude Code and Codex using their existing signed-in sessions
 - explicit active, loading, stale, authentication, rate-limited, error, and unavailable states;
 - click-on-ring manual refresh with concurrent requests collapsed into one follow-up;
 - bounded Claude and Codex collection using their existing authenticated sessions;
+- independent refresh of Omarchy's shared Claude usage record, even when `omarchy.agents` is disabled;
 - atomic private last-known-good cache and safe stale-data fallback;
 - no raw provider output, account identity, or credentials in logs or screenshots;
 - local validation, portable contract tests, QML linting, and CI.
@@ -53,6 +54,8 @@ Claude and Codex are enabled automatically. Toggle either one directly in the ca
 4. Restart the Omarchy shell or update/re-enable the plugin if it was already running an older release.
 
 The plugin delegates authentication to Claude Code through Omarchy's official collector. It does not ask for or store a Claude token.
+
+Claude refreshes also run Omarchy's official `omarchy-agent-usage-update --limits-only claude` path. This keeps `~/.local/state/omarchy/agents/usage/claude.json` current for compatible companion surfaces—such as themed or Pokémon usage widgets—even when the native `omarchy.agents` bar widget is disabled. The notch's existing startup, polling, and manual-refresh cadence owns this update, so no extra background daemon is installed.
 
 The environment variables `OMARCHY_AI_USAGE_EDGE`, `OMARCHY_AI_USAGE_OFFSET`, and `OMARCHY_AI_USAGE_SCREEN` remain temporary, non-persistent overrides for visual testing. `OMARCHY_AI_USAGE_PREVIEW=1` enables the labeled synthetic reference composition. `OMARCHY_REDUCED_MOTION=1` disables surface animation for the session.
 

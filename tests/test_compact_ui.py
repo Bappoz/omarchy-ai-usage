@@ -123,6 +123,14 @@ class CompactUiTests(unittest.TestCase):
         self.assertIn("duration: root.motionEnabled ? 500 : 0", window)
         self.assertIn("duration: root.animationsEnabled ? 900 : 0", ring)
 
+    def test_settings_follow_auto_hide_after_pointer_leaves(self) -> None:
+        window = (ROOT / "src" / "ui" / "EdgeWindow.qml").read_text()
+        self.assertIn("if (!root.autoHide || root.forcedOpen) return", window)
+        self.assertIn("if (!root.settingsOpen && (!root.hoverExpansion || root.heldOpen)) return", window)
+        self.assertIn("root.settingsOpen = false", window)
+        self.assertIn("root.heldOpen = false", window)
+        self.assertNotIn("root.heldOpen = true\n        if (root.hoveredIndex", window)
+
 
 if __name__ == "__main__":
     unittest.main()

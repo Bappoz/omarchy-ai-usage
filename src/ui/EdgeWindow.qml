@@ -247,8 +247,12 @@ PanelWindow {
     onProviderHovered: function(index, hovered) {
       root.hoveringProvider = hovered
       if (hovered) {
+        var shouldRefresh = root.hoveredIndex !== index || !root.showCard
         hoverGrace.stop()
         root.hoveredIndex = index
+        if (shouldRefresh && !root.previewMode && index >= 0 && index < root.providers.length) {
+          root.refreshRequested(String(root.providers[index].id || ""))
+        }
       } else {
         root.scheduleClose()
       }

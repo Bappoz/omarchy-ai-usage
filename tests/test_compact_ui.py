@@ -55,6 +55,12 @@ class CompactUiTests(unittest.TestCase):
         self.assertNotIn("console.log", source)
         self.assertNotIn("console.warn", source)
 
+    def test_opening_or_switching_provider_requests_fresh_limits(self) -> None:
+        window = (ROOT / "src" / "ui" / "EdgeWindow.qml").read_text()
+        self.assertIn("var shouldRefresh = root.hoveredIndex !== index || !root.showCard", window)
+        self.assertIn("if (shouldRefresh && !root.previewMode", window)
+        self.assertIn('root.refreshRequested(String(root.providers[index].id || ""))', window)
+
     def test_surface_is_passive_and_non_exclusive(self) -> None:
         source = (ROOT / "src" / "ui" / "EdgeWindow.qml").read_text()
         self.assertIn("exclusionMode: ExclusionMode.Ignore", source)

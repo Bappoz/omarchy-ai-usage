@@ -40,11 +40,69 @@ Live mode supports Claude Code and Codex using their existing signed-in sessions
 
 No third-party Python or JavaScript runtime dependency is required.
 
-## Preferences
+## Install
+
+Install the plugin from this repository and enable it:
+
+```sh
+omarchy plugin add https://github.com/Bappoz/omarchy-ai-usage.git --enable
+```
+
+The notch appears at the right edge of the focused display by default. Hover
+over it to reveal the provider rail, then select a provider to open its card.
+
+If the plugin was installed previously but is disabled, enable it again:
+
+```sh
+omarchy plugin enable ai-usage.notch
+```
+
+## Configure it
 
 Hover over the notch, open a provider, and select the sliders icon in the card. Each row cycles through its supported values. Changes are applied live and written through Omarchy's scoped plugin API.
 
-Claude and Codex are enabled automatically. Toggle either one directly in the card—no code, API key, or manual JSON edit is required. At least one provider stays enabled. Other preferences include edge, position, display scope, size, open behavior, refresh interval, provider label, percentage, reset time, and motion. Exact connector names and arbitrary offsets can also be supplied in the plugin's inline `shell.json` entry. See [Configuration](docs/configuration.md).
+Claude and Codex are enabled automatically. Toggle either one directly in the card—no code, API key, or manual JSON edit is required. At least one provider stays enabled.
+
+| Setting | Available choices | Default | What it changes |
+| --- | --- | --- | --- |
+| Edge | Top, right, bottom, left | Right | Which screen edge owns the notch |
+| Position | Start, center, end | Center | Where it sits along that edge |
+| Display | Focused, all, a named connector | Focused | Which display or displays show it |
+| Size | Small, medium, large | Medium | Notch, card, type, and ring scale |
+| Open behavior | Hover, click | Hover | How the rail and card open |
+| Auto-hide | On, off | On | Whether an idle rail collapses to the edge pill |
+| Refresh interval | 5, 15, 30, 60 minutes | 15 minutes | Normal polling interval for enabled providers |
+| Claude / Codex | On, off | On | Which live providers appear |
+| Provider label / percentage / reset time | On, off | Label off; others on | Compact-surface information density |
+| Motion | On, off | On | Surface transitions; turn off for a static UI |
+
+The card is the recommended configuration path. For an exact display connector
+or a continuous position, use the plugin entry in
+`~/.config/omarchy/shell.json` after installing the plugin:
+
+```json
+{
+  "id": "ai-usage.notch",
+  "edge": "left",
+  "offset": 0.25,
+  "monitor": "DP-1",
+  "size": "small",
+  "autoHide": true,
+  "expandBehavior": "click",
+  "pollingInterval": 300,
+  "showProviderLabel": true,
+  "showPercentage": true,
+  "showResetTimer": true,
+  "animations": false,
+  "enabledProviders": { "claude": true, "codex": false }
+}
+```
+
+Use `monitor: "focused"` for the current display or `monitor: "all"` for
+every display. `offset` accepts any value from `0.0` (start of the edge) to
+`1.0` (end of the edge); `pollingInterval` accepts 60–3600 seconds. The full
+configuration reference, including safe defaults and test-only overrides, is
+in [Configuration](docs/configuration.md).
 
 ### Claude does not appear
 
@@ -58,6 +116,33 @@ The plugin delegates authentication to Claude Code through Omarchy's official co
 Claude refreshes also run Omarchy's official `omarchy-agent-usage-update --limits-only claude` path. This keeps `~/.local/state/omarchy/agents/usage/claude.json` current for compatible companion surfaces—such as themed or Pokémon usage widgets—even when the native `omarchy.agents` bar widget is disabled. The notch's existing startup, polling, and manual-refresh cadence owns this update, so no extra background daemon is installed.
 
 The environment variables `OMARCHY_AI_USAGE_EDGE`, `OMARCHY_AI_USAGE_OFFSET`, and `OMARCHY_AI_USAGE_SCREEN` remain temporary, non-persistent overrides for visual testing. `OMARCHY_AI_USAGE_PREVIEW=1` enables the labeled synthetic reference composition. `OMARCHY_REDUCED_MOTION=1` disables surface animation for the session.
+
+## Update safely
+
+Updates preserve your configured preferences. Run:
+
+```sh
+omarchy plugin update ai-usage.notch
+```
+
+Then hover over the notch and open the Claude or Codex card once to request an
+immediate refresh. The normal interval resumes afterwards. Verify the installed
+plugin is enabled with:
+
+```sh
+omarchy plugin list
+```
+
+If an update changes the plugin in a way that needs a fresh shell load, disable
+and re-enable only this plugin—your stored settings remain in place:
+
+```sh
+omarchy plugin disable ai-usage.notch
+omarchy plugin enable ai-usage.notch
+```
+
+Do not use `omarchy refresh shell` for normal plugin updates: it resets shell
+configuration rather than updating this plugin.
 
 ## Validation
 
@@ -78,18 +163,11 @@ python helpers/codex_provider.py --no-cache
 
 Provider problems are represented as safe status objects and still exit successfully. Invalid command-line arguments exit with code 2.
 
-## Installation
+## Remove
 
-Install directly from the public repository:
-
-```sh
-omarchy plugin add https://github.com/Bappoz/omarchy-ai-usage.git --enable
-```
-
-Update or remove it with the normal Omarchy lifecycle:
+Remove the plugin with Omarchy's normal lifecycle command:
 
 ```sh
-omarchy plugin update ai-usage.notch
 omarchy plugin remove ai-usage.notch
 ```
 

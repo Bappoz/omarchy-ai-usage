@@ -14,6 +14,6 @@ elif scenario == "failure":
 elif scenario == "auth":
     print(json.dumps({"id": "claude", "ready": False, "usageStatusText": "Waiting for auth", "limits": []}))
 elif scenario == "stale":
-    print(json.dumps({"id": "claude", "ready": True, "tierLabel": "Pro", "usageStatusText": "Claude limits unavailable", "retryAdvised": True, "limits": [{"label": "Session (5-hour)", "percent": 20, "resetsAt": "2030-01-01T17:00:00Z"}]}))
+    print(json.dumps({"id": "claude", "ready": True, "tierLabel": "Pro", "usageStatusText": "Claude limits unavailable", "retryAdvised": True, "limits": [{"label": "Session (5-hour)", "percent": 0.20, "resetsAt": "2030-01-01T17:00:00Z"}]}))
 else:
-    print(json.dumps({"schemaVersion": 1, "id": "claude", "name": "Claude Code", "ready": True, "tierLabel": "Pro", "usageStatusText": "", "limits": [{"label": "Session (5-hour)", "percent": 25, "resetsAt": "2030-01-01T17:00:00Z"}, {"label": "Weekly (7-day)", "percent": 40, "resetsAt": "2030-01-08T12:00:00Z"}]}))
+    print(json.dumps({"schemaVersion": 1, "id": "claude", "name": "Claude Code", "ready": True, "tierLabel": "Pro", "usageStatusText": "", "limits": [{"label": "Session (5-hour)", "percent": 0.25, "resetsAt": "2030-01-01T17:00:00Z"}, {"label": "Weekly (7-day)", "percent": 0.40, "resetsAt": "2030-01-08T12:00:00Z"}]}))

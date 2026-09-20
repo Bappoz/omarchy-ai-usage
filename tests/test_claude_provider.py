@@ -44,8 +44,17 @@ class ClaudeProviderTests(unittest.TestCase):
         validate_snapshot(snapshot)
         self.assertEqual(snapshot["status"], "ACTIVE")
         self.assertEqual(snapshot["account"], {"label": None, "plan": "Pro"})
+        self.assertEqual(snapshot["windows"][0]["usedPercent"], 25)
+        self.assertEqual(snapshot["windows"][1]["usedPercent"], 40)
         self.assertEqual(snapshot["windows"][0]["durationMinutes"], 300)
         self.assertEqual(snapshot["windows"][1]["durationMinutes"], 10080)
+
+    def test_fraction_boundary_one_means_one_hundred_percent(self) -> None:
+        payload = collect("active")
+        payload["limits"][0]["percent"] = 1
+        snapshot = normalize_claude_payload(payload, NOW)
+        self.assertEqual(snapshot["windows"][0]["usedPercent"], 100)
+        self.assertEqual(snapshot["windows"][0]["remainingPercent"], 0)
 
     def test_auth_state_is_safe_and_non_crashing(self) -> None:
         snapshot = normalize_claude_payload(collect("auth"), NOW)

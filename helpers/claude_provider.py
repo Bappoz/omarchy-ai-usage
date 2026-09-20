@@ -118,11 +118,14 @@ def _slug(value: object, fallback: str) -> str:
 
 
 def _percent(value: object) -> float | int:
+    """Convert Omarchy's Claude 0..1 utilization fraction to 0..100."""
+
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ProviderError("ERROR", "Claude returned invalid quota data.")
     number = float(value)
-    if not math.isfinite(number) or not 0 <= number <= 100:
+    if not math.isfinite(number) or not 0 <= number <= 1:
         raise ProviderError("ERROR", "Claude returned invalid quota data.")
+    number = round(number * 100, 4)
     return int(number) if number.is_integer() else round(number, 4)
 
 

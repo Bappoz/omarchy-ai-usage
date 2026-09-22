@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "ai-usage.notch",
   "name": "Omarchy AI Usage",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "author": "Omarchy AI Usage contributors",
   "license": "MIT",
   "description": "A native edge-attached AI quota surface for Omarchy.",

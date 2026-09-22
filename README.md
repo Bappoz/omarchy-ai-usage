@@ -2,7 +2,7 @@
 
 A native, edge-attached AI quota surface for Omarchy, inspired by the compact interaction model and visual language of CodeNotch.
 
-> Release status: version 0.8.0 is ready for daily use and Omarchy Marketplace submission.
+> Release status: version 0.8.1 is ready for daily use and Omarchy Marketplace updates.
 
 ![CodeNotch-faithful notch and usage card](docs/assets/codenotch-faithful-surface.png)
 
@@ -21,19 +21,19 @@ Live mode supports Claude Code and Codex using their existing signed-in sessions
 - hover, click, and always-open rail behavior;
 - optional provider label, percentage, reset timer, and motion;
 - native in-card preferences persisted in Omarchy's own `shell.json` plugin entry;
-- one independent 15-minute poller per enabled provider, regardless of display count;
+- immediate updates when `omarchy.agents` replaces a provider record, plus one fallback poller per enabled provider;
 - bounded retries with exponential backoff, auth-aware delay, and reset-aware rate-limit delay;
 - explicit active, loading, stale, authentication, rate-limited, error, and unavailable states;
 - click-on-ring manual refresh with concurrent requests collapsed into one follow-up;
-- bounded Claude and Codex collection using their existing authenticated sessions;
-- independent refresh of Omarchy's shared Claude usage record, even when `omarchy.agents` is disabled;
-- atomic private last-known-good cache and safe stale-data fallback;
+- read-only normalization of Claude and Codex records maintained by `omarchy.agents`;
+- one official usage source shared with compatible consumers such as OmaPkDex;
 - no raw provider output, account identity, or credentials in logs or screenshots;
 - local validation, portable contract tests, QML linting, and CI.
 
 ## Requirements
 
 - Omarchy 4.0 or newer with the Quickshell-based shell;
+- the built-in `omarchy.agents` widget enabled, because it owns usage collection;
 - Claude Code and/or Codex, already signed in for live usage;
 - Python 3.11 or newer;
 - `omarchy plugin validate` for platform validation.
@@ -106,14 +106,15 @@ in [Configuration](docs/configuration.md).
 
 ### Claude does not appear
 
-1. Confirm Claude Code is installed with `claude --version`.
-2. Sign in through Claude Code with `claude auth login`.
-3. Open the card settings and make sure **Claude** is **On**.
-4. Restart the Omarchy shell or update/re-enable the plugin if it was already running an older release.
+1. Confirm the built-in **Agents** widget (`omarchy.agents`) is enabled in the bar.
+2. Confirm Claude Code is installed with `claude --version`.
+3. Sign in through Claude Code with `claude auth login` only when Claude itself reports that authentication is required.
+4. Open the card settings and make sure **Claude** is **On**.
+5. Restart the Omarchy shell after updating from a release older than 0.8.1.
 
-The plugin delegates authentication to Claude Code through Omarchy's official collector. It does not ask for or store a Claude token.
+The plugin does not start Claude Code, Codex, or `omarchy-agent-usage-update`. The built-in `omarchy.agents` widget is the single writer of `~/.local/state/omarchy/agents/usage/*.json`; the notch and OmaPkDex only watch and read those records. This avoids duplicate collection and keeps every surface on the same values.
 
-Claude refreshes also run Omarchy's official `omarchy-agent-usage-update --limits-only claude` path. This keeps `~/.local/state/omarchy/agents/usage/claude.json` current for compatible companion surfaces—such as themed or Pokémon usage widgets—even when the native `omarchy.agents` bar widget is disabled. The notch's existing startup, polling, and manual-refresh cadence owns this update, so no extra background daemon is installed.
+Authentication remains owned by the provider clients and collection remains owned by Omarchy. The notch never reads credential files, tokens, browser storage, or raw provider responses.
 
 The environment variables `OMARCHY_AI_USAGE_EDGE`, `OMARCHY_AI_USAGE_OFFSET`, and `OMARCHY_AI_USAGE_SCREEN` remain temporary, non-persistent overrides for visual testing. `OMARCHY_AI_USAGE_PREVIEW=1` enables the labeled synthetic reference composition. `OMARCHY_REDUCED_MOTION=1` disables surface animation for the session.
 
@@ -133,12 +134,11 @@ plugin is enabled with:
 omarchy plugin list
 ```
 
-If an update changes the plugin in a way that needs a fresh shell load, disable
-and re-enable only this plugin—your stored settings remain in place:
+After an update, restart the shell so nested QML components are reloaded while
+your stored settings remain in place:
 
 ```sh
-omarchy plugin disable ai-usage.notch
-omarchy plugin enable ai-usage.notch
+omarchy restart shell
 ```
 
 Do not use `omarchy refresh shell` for normal plugin updates: it resets shell
@@ -154,11 +154,11 @@ make check
 
 The gate runs unit and contract tests, Python linting, QML linting, and the official Omarchy plugin validator. CI runs the portable subset on every push and pull request.
 
-To probe only the normalized provider output:
+To probe only the normalized shared provider output:
 
 ```sh
-python helpers/claude_provider.py --no-cache
-python helpers/codex_provider.py --no-cache
+python helpers/omarchy_agent_provider.py --provider claude
+python helpers/omarchy_agent_provider.py --provider codex
 ```
 
 Provider problems are represented as safe status objects and still exit successfully. Invalid command-line arguments exit with code 2.
@@ -181,7 +181,7 @@ See [Release readiness](docs/release-readiness.md) for the checks to complete be
 .
 ├── manifest.json
 ├── contracts/provider-snapshot.schema.json
-├── helpers/{claude,codex}_provider.py
+├── helpers/omarchy_agent_provider.py
 ├── src/
 │   ├── model/
 │   ├── ui/
@@ -192,7 +192,7 @@ See [Release readiness](docs/release-readiness.md) for the checks to complete be
 
 ## Privacy and security
 
-The repository contains no real provider output or account data. Authentication stays inside Claude Code and Codex; the plugin reads only normalized quota responses and never opens credential files. Cached snapshots contain usage windows, percentages, reset times, and an optional plan label—never tokens or account identifiers. See [Security policy](SECURITY.md).
+The repository contains no real provider output or account data. Authentication stays inside Claude Code and Codex. Omarchy writes normalized quota records, and this plugin reads only those records; it never opens credential files or launches a provider client. Snapshots contain usage windows, percentages, reset times, and an optional plan label—never tokens or account identifiers. See [Security policy](SECURITY.md).
 
 ## License and attribution
 

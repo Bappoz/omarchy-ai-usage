@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.1
+
+- Use the schema-version-1 records maintained by `omarchy.agents` as the only live source for Claude and Codex.
+- Watch shared record changes so the notch follows official updates immediately.
+- Remove provider CLI and usage-updater execution from the notch runtime.
+- Keep OmaPkDex and the notch as independent read-only consumers of the same official records.
+
 ## 0.8.0
 
 - Add live Claude Code usage through Omarchy's authenticated collector.

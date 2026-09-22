@@ -4,6 +4,10 @@ import Quickshell
 QtObject {
   id: root
 
+  readonly property string stateHome: Quickshell.env("XDG_STATE_HOME")
+                                      || (Quickshell.env("HOME") + "/.local/state")
+  readonly property string agentUsageDir: stateHome + "/omarchy/agents/usage"
+
   property bool previewMode: Quickshell.env("OMARCHY_AI_USAGE_PREVIEW") === "1"
   property int pollingIntervalSeconds: 900
   property var enabledProviders: ({ "claude": true, "codex": true })
@@ -36,7 +40,9 @@ QtObject {
   property ProviderRunner claudeRunner: ProviderRunner {
     providerId: "claude"
     displayName: "Claude"
-    helperFile: "claude_provider.py"
+    helperFile: "omarchy_agent_provider.py"
+    helperArguments: ["--provider", "claude"]
+    watchedFilePath: root.agentUsageDir + "/claude.json"
     enabled: !root.previewMode && root.isEnabled("claude")
     pollingIntervalSeconds: root.pollingIntervalSeconds
   }
@@ -44,7 +50,9 @@ QtObject {
   property ProviderRunner codexRunner: ProviderRunner {
     providerId: "codex"
     displayName: "Codex"
-    helperFile: "codex_provider.py"
+    helperFile: "omarchy_agent_provider.py"
+    helperArguments: ["--provider", "codex"]
+    watchedFilePath: root.agentUsageDir + "/codex.json"
     enabled: !root.previewMode && root.isEnabled("codex")
     pollingIntervalSeconds: root.pollingIntervalSeconds
   }

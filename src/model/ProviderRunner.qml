@@ -8,6 +8,8 @@ QtObject {
   required property string providerId
   required property string displayName
   required property string helperFile
+  property var helperArguments: []
+  property string watchedFilePath: ""
   property bool enabled: true
   property int pollingIntervalSeconds: 900
   property var snapshot: loadingSnapshot()
@@ -78,7 +80,7 @@ QtObject {
     }
     pollTimer.stop()
     root.loading = true
-    providerProcess.command = ["python3", root.helperPath]
+    providerProcess.command = ["python3", root.helperPath].concat(root.helperArguments || [])
     providerProcess.running = true
   }
 
@@ -148,5 +150,12 @@ QtObject {
     interval: 900000
     repeat: false
     onTriggered: root.refresh()
+  }
+
+  property FileView providerRecordWatcher: FileView {
+    path: root.watchedFilePath
+    watchChanges: root.watchedFilePath !== ""
+    printErrors: false
+    onFileChanged: root.refresh()
   }
 }

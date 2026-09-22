@@ -5,20 +5,20 @@
 - Look and behave like a native Omarchy surface.
 - Keep provider acquisition separate from presentation.
 - Continue rendering other providers when one fails.
-- Preserve a last-known-good snapshot and communicate staleness honestly.
+- Follow the official shared records and communicate unavailable state honestly.
 - Poll once globally, regardless of the number of displays.
 - Avoid direct credential access and unnecessary dependencies.
 
 ## Runtime boundaries
 
 ```text
-Codex process
-    │ documented JSON-RPC
+omarchy.agents
+    │ atomic schema-version-1 records
     ▼
-Codex provider adapter
+Read-only shared-record normalizer
     │ validated provider snapshot
     ▼
-Provider store and last-good cache
+Provider store
     │ provider-neutral state
     ├───────────────┬───────────────┐
     ▼               ▼               ▼
@@ -46,15 +46,14 @@ The store is a singleton. Each provider refreshes at startup, on manual request,
 
 Placement is represented as an edge, normalized offset, and screen selector. `Variants` tracks the selected live `Quickshell.screens`. Focused scope follows Hyprland focus, named scope restores the requested connector after reconnect, and all scope creates one view per output. A fixed-size screen surface prevents stale-buffer scaling during notch expansion; a union input region keeps the transparent remainder click-through.
 
-The Codex adapter exchanges bounded JSON-RPC messages with `codex app-server`. The Claude adapter invokes Omarchy's authenticated `omarchy-agent-usage-update --limits-only claude` path, then reads the atomically replaced shared record. This preserves Omarchy's official record contract and keeps companion usage surfaces current even when the native agents widget is disabled. Older Omarchy releases without the updater fall back to the direct Claude collector. Both adapters are short-lived standard-library helpers with deadlines, output caps, fixed process arguments, static failure messages, private caches, and deterministic cleanup.
+The built-in `omarchy.agents` widget is the only collector and writer. It atomically maintains schema-version-1 records under `$XDG_STATE_HOME/omarchy/agents/usage/`. A single bounded standard-library helper validates and normalizes the Claude and Codex records into this plugin's provider-neutral snapshot contract. File watchers trigger immediate rereads after official updates; a fallback timer covers missed events. The notch never starts provider clients or the Omarchy updater.
 
 QML consumes only helper stdout and never logs provider output or stderr. A malformed snapshot becomes a static `ERROR` state without disrupting other providers. Synthetic multi-provider data can be selected only through `OMARCHY_AI_USAGE_PREVIEW=1`, and its expanded card visibly labels that mode. Normal operation renders only provider snapshots backed by real adapters.
 
 ## Persistence
 
 - Configuration: the plugin's inline entry in `~/.config/omarchy/shell.json`, written by Omarchy's scoped plugin facade.
-- Last-good state: `$XDG_STATE_HOME/omarchy-ai-usage/`, falling back to `~/.local/state/omarchy-ai-usage/`.
-- Shared Claude state: `$XDG_STATE_HOME/omarchy/agents/usage/claude.json`, written atomically by Omarchy's official updater.
+- Shared provider state: `$XDG_STATE_HOME/omarchy/agents/usage/{claude,codex}.json`, written atomically by `omarchy.agents` and consumed read-only by the notch.
 
 The service watches `shell.json`, extracts only its own entry, validates every field, and applies safe defaults when the file is missing or malformed. It never writes the file directly: changes from the in-card settings surface go through `shell.updateEntryInline`, which is scoped by the host to this plugin ID.
 

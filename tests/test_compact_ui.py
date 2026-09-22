@@ -17,8 +17,11 @@ class CompactUiTests(unittest.TestCase):
     def test_service_uses_one_bounded_runner_per_live_provider(self) -> None:
         source = "\n".join(path.read_text() for path in sorted((ROOT / "src").rglob("*.qml")))
         provider = (ROOT / "src" / "model" / "ProviderRunner.qml").read_text()
-        self.assertIn("codex_provider.py", source)
-        self.assertIn("claude_provider.py", source)
+        self.assertIn("omarchy_agent_provider.py", source)
+        self.assertIn('helperArguments: ["--provider", "claude"]', source)
+        self.assertIn('helperArguments: ["--provider", "codex"]', source)
+        self.assertIn('watchedFilePath: root.agentUsageDir + "/claude.json"', source)
+        self.assertIn('watchedFilePath: root.agentUsageDir + "/codex.json"', source)
         self.assertNotIn("account/rateLimits/read", source)
         self.assertIn("Process {", source)
         self.assertEqual(provider.count("property Timer pollTimer: Timer {"), 1)
@@ -51,7 +54,8 @@ class CompactUiTests(unittest.TestCase):
         source = (ROOT / "src" / "model" / "ProviderRunner.qml").read_text()
         self.assertIn("if (providerProcess.running) {", source)
         self.assertIn("root.refreshPending = true", source)
-        self.assertIn('providerProcess.command = ["python3", root.helperPath]', source)
+        self.assertIn('providerProcess.command = ["python3", root.helperPath].concat', source)
+        self.assertIn("property FileView providerRecordWatcher: FileView {", source)
         self.assertNotIn("console.log", source)
         self.assertNotIn("console.warn", source)
 

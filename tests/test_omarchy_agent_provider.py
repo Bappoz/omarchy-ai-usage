@@ -33,10 +33,26 @@ class SharedRecordTests(unittest.TestCase):
         snapshot = normalize_record(record(), "claude")
         validate_snapshot(snapshot)
         self.assertEqual(snapshot["status"], "ACTIVE")
-        self.assertEqual(snapshot["headlineWindowId"], "weekly-7-day")
+        self.assertEqual(snapshot["headlineWindowId"], "session-5-hour")
         self.assertEqual(snapshot["windows"][0]["usedPercent"], 27)
         self.assertEqual(snapshot["windows"][1]["remainingPercent"], 58)
         self.assertEqual(snapshot["account"], {"label": None, "plan": "Pro"})
+
+    def test_short_window_remains_headline_when_weekly_usage_is_higher(self) -> None:
+        value = record()
+        value["limits"][0]["percent"] = 0.08
+        value["limits"][1]["percent"] = 0.91
+        snapshot = normalize_record(value, "claude")
+        self.assertEqual(snapshot["headlineWindowId"], "session-5-hour")
+
+    def test_first_provider_window_is_fallback_when_duration_is_unknown(self) -> None:
+        value = record()
+        value["limits"] = [
+            {"label": "Primary allowance", "percent": 0.2, "resetsAt": None},
+            {"label": "Secondary allowance", "percent": 0.9, "resetsAt": None},
+        ]
+        snapshot = normalize_record(value, "claude")
+        self.assertEqual(snapshot["headlineWindowId"], "primary-allowance")
 
     def test_codex_uses_the_same_official_contract(self) -> None:
         snapshot = normalize_record(record("codex"), "codex")

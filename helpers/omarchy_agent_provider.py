@@ -121,6 +121,16 @@ def duration_minutes(label: str) -> int | None:
     return None
 
 
+def headline_window(windows: Sequence[Mapping[str, Any]]) -> Mapping[str, Any] | None:
+    """Choose the shortest known quota window for the compact surface."""
+    if not windows:
+        return None
+    known = [window for window in windows if isinstance(window.get("durationMinutes"), int)]
+    if known:
+        return min(known, key=lambda item: int(item["durationMinutes"]))
+    return windows[0]
+
+
 def normalize_record(record: Mapping[str, Any], provider_id: str) -> dict[str, Any]:
     status_text = safe_text(record.get("usageStatusText"), 80).lower()
     windows: list[dict[str, Any]] = []
@@ -159,7 +169,7 @@ def normalize_record(record: Mapping[str, Any], provider_id: str) -> dict[str, A
     else:
         status = "ACTIVE"
 
-    headline = max(windows, key=lambda item: float(item["usedPercent"])) if windows else None
+    headline = headline_window(windows)
     plan = safe_text(record.get("tierLabel"), 80) or None
     messages = {
         "NEEDS_AUTH": f"Sign in through {PROVIDERS[provider_id]} and let omarchy.agents refresh usage.",

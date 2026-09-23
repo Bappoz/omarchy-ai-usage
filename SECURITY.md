@@ -28,6 +28,11 @@ $XDG_STATE_HOME/omarchy/agents/usage/claude.json
 $XDG_STATE_HOME/omarchy/agents/usage/codex.json
 ```
 
+When a live card is visible, the plugin may invoke the fixed command
+`omarchy-shell omarchy.agents refresh`. This is an IPC request to the built-in
+owner; it does not pass user-controlled arguments, access credentials, or
+create a second collector. Requests are single-flight and rate-limited.
+
 Each record must be a regular non-symlink file no larger than 1 MiB, use schema version 1, and match the requested provider ID. Only a validated plan label, usage windows, percentages, reset times, status, and update time cross the UI boundary. Raw responses, email addresses, account IDs, credentials, and reset-credit identifiers are never copied into plugin state.
 
 Common bearer-token, API-key, JWT, email, home-path, and control-character patterns have a tested redaction function for any future diagnostics. Current runtime failures use static messages and do not include exception or server text.
@@ -38,6 +43,6 @@ All committed fixtures must be synthetic. The tests reject token-like values and
 
 ## Runtime behavior
 
-The QML service watches each enabled provider record and runs a short-lived local normalizer after an atomic replacement. The default 15-minute adaptive timer remains only as a fallback for missed file events. Transient failures use bounded exponential backoff; signed-out state waits at least one hour; explicit rate-limited state waits until the normal interval or the earliest reported reset, whichever is longer (capped at six hours). Concurrent requests for the same provider collapse into one follow-up read, and display count does not create extra pollers.
+The QML service watches each enabled provider record and runs a short-lived local normalizer after an atomic replacement. The default 15-minute adaptive timer remains only as a fallback for missed file events. A visible card requests official collection every 30 seconds through IPC, with a 15-second cooldown and single-flight collapse. Transient failures use bounded exponential backoff; signed-out state waits at least one hour; explicit rate-limited state waits until the normal interval or the earliest reported reset, whichever is longer (capped at six hours). Concurrent requests for the same provider collapse into one follow-up read, and display count does not create extra provider readers.
 
 The service does not initiate login, read credential files, make direct HTTP requests, or start provider clients. QML consumes helper stderr without logging it and replaces malformed stdout with a static error message. Preferences contain only non-secret presentation and scheduling values and are persisted through Omarchy's plugin-scoped `shell.json` API.

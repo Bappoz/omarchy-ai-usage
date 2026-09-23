@@ -2,7 +2,7 @@
 
 A native, edge-attached AI quota surface for Omarchy, inspired by the compact interaction model and visual language of CodeNotch.
 
-> Release status: version 0.8.1 is ready for daily use and Omarchy Marketplace updates.
+> Release status: version 0.9.0 is ready for daily use and Omarchy Marketplace updates.
 
 ![CodeNotch-faithful notch and usage card](docs/assets/codenotch-faithful-surface.png)
 
@@ -22,6 +22,7 @@ Live mode supports Claude Code and Codex using their existing signed-in sessions
 - optional provider label, percentage, reset timer, and motion;
 - native in-card preferences persisted in Omarchy's own `shell.json` plugin entry;
 - immediate updates when `omarchy.agents` replaces a provider record, plus one fallback poller per enabled provider;
+- an official `omarchy.agents` refresh request when a card opens and every 30 seconds while it remains visible, rate-limited to avoid overlapping collection;
 - bounded retries with exponential backoff, auth-aware delay, and reset-aware rate-limit delay;
 - explicit active, loading, stale, authentication, rate-limited, error, and unavailable states;
 - click-on-ring manual refresh with concurrent requests collapsed into one follow-up;
@@ -71,7 +72,7 @@ Claude and Codex are enabled automatically. Toggle either one directly in the ca
 | Size | Small, medium, large | Medium | Notch, card, type, and ring scale |
 | Open behavior | Hover, click | Hover | How the rail and card open |
 | Auto-hide | On, off | On | Whether an idle rail collapses to the edge pill |
-| Refresh interval | 5, 15, 30, 60 minutes | 15 minutes | Normal polling interval for enabled providers |
+| Refresh interval | 5, 15, 30, 60 minutes | 15 minutes | Hidden fallback reread; visible cards request official data every 30 seconds |
 | Claude / Codex | On, off | On | Which live providers appear |
 | Provider label / percentage / reset time | On, off | Label off; others on | Compact-surface information density |
 | Motion | On, off | On | Surface transitions; turn off for a static UI |
@@ -112,7 +113,14 @@ in [Configuration](docs/configuration.md).
 4. Open the card settings and make sure **Claude** is **On**.
 5. Restart the Omarchy shell after updating from a release older than 0.8.1.
 
-The plugin does not start Claude Code, Codex, or `omarchy-agent-usage-update`. The built-in `omarchy.agents` widget is the single writer of `~/.local/state/omarchy/agents/usage/*.json`; the notch and OmaPkDex only watch and read those records. This avoids duplicate collection and keeps every surface on the same values.
+The plugin does not start Claude Code, Codex, or `omarchy-agent-usage-update`. The built-in `omarchy.agents` widget is the single writer of `~/.local/state/omarchy/agents/usage/*.json`; the notch and OmaPkDex only watch and read those records. When a live card is opened, the notch sends the official `omarchy.agents refresh` IPC request and then waits for its atomic record update. Requests are collapsed and limited to one every 15 seconds. This avoids duplicate collectors and keeps every surface on the same values.
+
+The compact ring uses the shortest recognized quota window (for example,
+Claude's 5-hour session). Longer windows such as weekly quota remain visible in
+the expanded card. Copilot, Gemini and Perplexity are not exposed as live data
+because their currently documented sources cannot satisfy the quota contract
+without unsupported access or fabricated percentages. See
+[Provider feasibility](docs/provider-feasibility.md).
 
 Authentication remains owned by the provider clients and collection remains owned by Omarchy. The notch never reads credential files, tokens, browser storage, or raw provider responses.
 

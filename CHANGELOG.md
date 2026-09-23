@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0
+
+- Make compact Claude usage follow the shortest recognized window instead of whichever window has the highest percentage.
+- Request fresh records through the built-in `omarchy.agents` IPC on card open and every 30 seconds while visible, with single-flight and cooldown protection.
+- Document the current safe-source feasibility results for Copilot, Gemini CLI, and Perplexity rather than exposing fabricated live percentages.
+- Keep weekly and other longer quota windows available in the expanded card.
+
 ## 0.8.1
 
 - Use the schema-version-1 records maintained by `omarchy.agents` as the only live source for Claude and Codex.

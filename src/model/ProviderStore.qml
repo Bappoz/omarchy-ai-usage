@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 
 QtObject {
   id: root
@@ -11,6 +12,9 @@ QtObject {
   property bool previewMode: Quickshell.env("OMARCHY_AI_USAGE_PREVIEW") === "1"
   property int pollingIntervalSeconds: 900
   property var enabledProviders: ({ "claude": true, "codex": true })
+  property bool officialRefreshPending: false
+  property double lastOfficialRefreshMs: 0
+  readonly property int officialRefreshCooldownMs: 15000
   readonly property bool ready: true
   readonly property bool loading: claudeRunner.loading || codexRunner.loading
   readonly property var snapshots: {
@@ -27,14 +31,46 @@ QtObject {
 
   function refresh(providerId) {
     if (root.previewMode) return
+    root.requestOfficialRefresh()
     if (providerId === "claude") claudeRunner.refresh()
     else if (providerId === "codex") codexRunner.refresh()
   }
 
   function refreshAll() {
     if (root.previewMode) return
+    root.requestOfficialRefresh()
     if (claudeRunner.enabled) claudeRunner.refresh()
     if (codexRunner.enabled) codexRunner.refresh()
+  }
+
+  function requestOfficialRefresh() {
+    var elapsed = Date.now() - root.lastOfficialRefreshMs
+    if (officialRefreshProcess.running) {
+      root.officialRefreshPending = true
+      return
+    }
+    if (elapsed >= 0 && elapsed < root.officialRefreshCooldownMs) return
+    root.lastOfficialRefreshMs = Date.now()
+    officialRefreshProcess.command = ["omarchy-shell", "omarchy.agents", "refresh"]
+    officialRefreshProcess.running = true
+  }
+
+  property Process officialRefreshProcess: Process {
+    running: false
+    stdout: StdioCollector { waitForEnd: true }
+    stderr: StdioCollector { waitForEnd: true }
+    onExited: {
+      if (root.officialRefreshPending) {
+        root.officialRefreshPending = false
+        officialRefreshCooldown.restart()
+      }
+    }
+  }
+
+  property Timer officialRefreshCooldown: Timer {
+    interval: root.officialRefreshCooldownMs
+    repeat: false
+    onTriggered: root.requestOfficialRefresh()
   }
 
   property ProviderRunner claudeRunner: ProviderRunner {

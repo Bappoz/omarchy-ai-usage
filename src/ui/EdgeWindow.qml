@@ -223,6 +223,14 @@ PanelWindow {
     }
   }
 
+  Timer {
+    id: visibleRefresh
+    interval: 30000
+    repeat: true
+    running: root.showCard && !root.previewMode && root.activeProvider !== null
+    onTriggered: root.refreshRequested(String(root.activeProvider.id || ""))
+  }
+
   CompactNotch {
     id: notch
     x: root.horizontalEdge

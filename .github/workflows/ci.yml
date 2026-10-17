@@ -15,6 +15,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install ruff
+      - run: pip install ruff==0.17.1
       - run: ruff check helpers tests
       - run: python -m unittest discover -s tests -v

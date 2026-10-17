@@ -182,6 +182,7 @@ Item {
       }
 
       MouseArea {
+        id: cellMouse
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
@@ -196,6 +197,12 @@ Item {
         ? Math.round(modelData.usedPercent) + " percent used"
         : "Usage unavailable"
       Accessible.onPressAction: root.providerActivated(index)
+
+      // A refresh rebuilds the delegates under the pointer; report the exit
+      // the destroyed MouseArea would otherwise never send.
+      Component.onDestruction: {
+        if (cellMouse.containsMouse) root.providerHovered(cell.index, false)
+      }
     }
   }
 }

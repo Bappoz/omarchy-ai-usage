@@ -127,6 +127,17 @@ PanelWindow {
     hoverGrace.restart()
   }
 
+  // MouseAreas destroyed or disabled while hovered (the provider Repeater is
+  // rebuilt whenever a refresh lands) never report containsMouse=false, which
+  // left the card stuck open. The surface-wide HoverHandler is the source of
+  // truth once the pointer leaves the layer surface.
+  function pointerLeftSurface() {
+    root.hoveringSurface = false
+    root.hoveringProvider = false
+    root.hoveringCard = false
+    root.scheduleClose()
+  }
+
   function cardTargetX() {
     var ringX = root.horizontalEdge
       ? notch.x + notch.providerCenter(root.hoveredIndex)
@@ -231,104 +242,116 @@ PanelWindow {
     onTriggered: root.refreshRequested(String(root.activeProvider.id || ""))
   }
 
-  CompactNotch {
-    id: notch
-    x: root.horizontalEdge
-      ? Math.round(root.edgeOffset * Math.max(0, root.screenWidth - width))
-      : (root.edge === "right" ? root.screenWidth - width : 0)
-    y: !root.horizontalEdge
-      ? Math.round(root.edgeOffset * Math.max(0, root.screenHeight - height))
-      : (root.edge === "bottom" ? root.screenHeight - height : 0)
-    width: implicitWidth
-    height: implicitHeight
-    z: 2
-    edge: root.edge
-    providers: root.providers
-    unfolded: root.unfolded
-    activeIndex: root.hoveredIndex
-    previewMode: root.previewMode
-    uiScale: root.sizeScale
-    animationsEnabled: root.motionEnabled
-    showProviderLabel: root.preferences.showProviderLabel === true
-    showPercentage: root.preferences.showPercentage !== false
+  Item {
+    id: surfaceRoot
+    anchors.fill: parent
 
-    onSurfaceHovered: function(hovered) {
-      root.hoveringSurface = hovered
-      if (hovered) hoverGrace.stop()
-      else root.scheduleClose()
+    HoverHandler {
+      id: surfaceHover
+      onHoveredChanged: {
+        if (!hovered) root.pointerLeftSurface()
+      }
     }
-    onProviderHovered: function(index, hovered) {
-      root.hoveringProvider = hovered
-      if (hovered) {
-        var shouldRefresh = root.hoveredIndex !== index || !root.showCard
-        hoverGrace.stop()
-        root.hoveredIndex = index
-        if (shouldRefresh && !root.previewMode && index >= 0 && index < root.providers.length) {
+
+    CompactNotch {
+      id: notch
+      x: root.horizontalEdge
+        ? Math.round(root.edgeOffset * Math.max(0, root.screenWidth - width))
+        : (root.edge === "right" ? root.screenWidth - width : 0)
+      y: !root.horizontalEdge
+        ? Math.round(root.edgeOffset * Math.max(0, root.screenHeight - height))
+        : (root.edge === "bottom" ? root.screenHeight - height : 0)
+      width: implicitWidth
+      height: implicitHeight
+      z: 2
+      edge: root.edge
+      providers: root.providers
+      unfolded: root.unfolded
+      activeIndex: root.hoveredIndex
+      previewMode: root.previewMode
+      uiScale: root.sizeScale
+      animationsEnabled: root.motionEnabled
+      showProviderLabel: root.preferences.showProviderLabel === true
+      showPercentage: root.preferences.showPercentage !== false
+
+      onSurfaceHovered: function(hovered) {
+        root.hoveringSurface = hovered
+        if (hovered) hoverGrace.stop()
+        else root.scheduleClose()
+      }
+      onProviderHovered: function(index, hovered) {
+        root.hoveringProvider = hovered
+        if (hovered) {
+          var shouldRefresh = root.hoveredIndex !== index || !root.showCard
+          hoverGrace.stop()
+          root.hoveredIndex = index
+          if (shouldRefresh && !root.previewMode && index >= 0 && index < root.providers.length) {
+            root.refreshRequested(String(root.providers[index].id || ""))
+          }
+        } else {
+          root.scheduleClose()
+        }
+      }
+      onProviderActivated: function(index) {
+        if (!root.previewMode && index >= 0 && index < root.providers.length) {
           root.refreshRequested(String(root.providers[index].id || ""))
         }
-      } else {
-        root.scheduleClose()
       }
-    }
-    onProviderActivated: function(index) {
-      if (!root.previewMode && index >= 0 && index < root.providers.length) {
-        root.refreshRequested(String(root.providers[index].id || ""))
+      onBodyActivated: {
+        root.heldOpen = !root.heldOpen
+        if (root.heldOpen && root.hoveredIndex < 0 && root.providers.length > 0) root.hoveredIndex = 0
+        if (!root.heldOpen) root.settingsOpen = false
       }
-    }
-    onBodyActivated: {
-      root.heldOpen = !root.heldOpen
-      if (root.heldOpen && root.hoveredIndex < 0 && root.providers.length > 0) root.hoveredIndex = 0
-      if (!root.heldOpen) root.settingsOpen = false
-    }
-  }
-
-  ExpandedCard {
-    id: expandedCard
-    x: root.cardTargetX()
-    y: root.cardTargetY()
-    width: implicitWidth
-    height: implicitHeight
-    visible: root.showCard || opacity > 0
-    opacity: root.showCard ? 1 : 0
-    scale: root.showCard ? 1 : 0.985
-    edge: root.edge
-    tailCenter: root.horizontalEdge
-      ? notch.x + notch.providerCenter(root.hoveredIndex) - x
-      : notch.y + notch.providerCenter(root.hoveredIndex) - y
-    snapshot: root.activeProvider ? root.activeProvider.snapshot : null
-    providerId: root.activeProvider ? String(root.activeProvider.id || "codex") : "codex"
-    loading: root.loading
-    previewMode: root.previewMode
-    uiScale: root.sizeScale
-    animationsEnabled: root.motionEnabled
-    showResetTimer: root.preferences.showResetTimer !== false
-    settingsOpen: root.settingsOpen
-    preferences: root.preferences
-    onSettingsRequested: {
-      root.settingsOpen = !root.settingsOpen
-      if (root.settingsOpen) {
-        root.heldOpen = false
-        if (root.hoveredIndex < 0 && root.providers.length > 0) root.hoveredIndex = 0
-      }
-    }
-    onPreferenceChanged: function(key, value) { root.preferenceChanged(key, value) }
-    onCardHovered: function(hovered) {
-      root.hoveringCard = hovered
-      if (hovered) hoverGrace.stop()
-      else root.scheduleClose()
     }
 
-    Behavior on x {
-      NumberAnimation { duration: root.motionEnabled ? 500 : 0; easing.type: Easing.OutCubic }
-    }
-    Behavior on y {
-      NumberAnimation { duration: root.motionEnabled ? 500 : 0; easing.type: Easing.OutCubic }
-    }
-    Behavior on opacity {
-      NumberAnimation { duration: root.motionEnabled ? 180 : 0; easing.type: Easing.OutCubic }
-    }
-    Behavior on scale {
-      NumberAnimation { duration: root.motionEnabled ? 180 : 0; easing.type: Easing.OutCubic }
+    ExpandedCard {
+      id: expandedCard
+      x: root.cardTargetX()
+      y: root.cardTargetY()
+      width: implicitWidth
+      height: implicitHeight
+      visible: root.showCard || opacity > 0
+      opacity: root.showCard ? 1 : 0
+      scale: root.showCard ? 1 : 0.985
+      edge: root.edge
+      tailCenter: root.horizontalEdge
+        ? notch.x + notch.providerCenter(root.hoveredIndex) - x
+        : notch.y + notch.providerCenter(root.hoveredIndex) - y
+      snapshot: root.activeProvider ? root.activeProvider.snapshot : null
+      providerId: root.activeProvider ? String(root.activeProvider.id || "codex") : "codex"
+      loading: root.loading
+      previewMode: root.previewMode
+      uiScale: root.sizeScale
+      animationsEnabled: root.motionEnabled
+      showResetTimer: root.preferences.showResetTimer !== false
+      settingsOpen: root.settingsOpen
+      preferences: root.preferences
+      onSettingsRequested: {
+        root.settingsOpen = !root.settingsOpen
+        if (root.settingsOpen) {
+          root.heldOpen = false
+          if (root.hoveredIndex < 0 && root.providers.length > 0) root.hoveredIndex = 0
+        }
+      }
+      onPreferenceChanged: function(key, value) { root.preferenceChanged(key, value) }
+      onCardHovered: function(hovered) {
+        root.hoveringCard = hovered
+        if (hovered) hoverGrace.stop()
+        else root.scheduleClose()
+      }
+
+      Behavior on x {
+        NumberAnimation { duration: root.motionEnabled ? 500 : 0; easing.type: Easing.OutCubic }
+      }
+      Behavior on y {
+        NumberAnimation { duration: root.motionEnabled ? 500 : 0; easing.type: Easing.OutCubic }
+      }
+      Behavior on opacity {
+        NumberAnimation { duration: root.motionEnabled ? 180 : 0; easing.type: Easing.OutCubic }
+      }
+      Behavior on scale {
+        NumberAnimation { duration: root.motionEnabled ? 180 : 0; easing.type: Easing.OutCubic }
+      }
     }
   }
 

@@ -145,6 +145,14 @@ class CompactUiTests(unittest.TestCase):
         self.assertIn("duration: root.motionEnabled ? 500 : 0", window)
         self.assertIn("duration: root.animationsEnabled ? 900 : 0", ring)
 
+    def test_pointer_leaving_surface_closes_even_after_delegates_rebuild(self) -> None:
+        window = (ROOT / "src" / "ui" / "EdgeWindow.qml").read_text()
+        compact = (ROOT / "src" / "ui" / "CompactNotch.qml").read_text()
+        self.assertIn("HoverHandler {", window)
+        self.assertIn("if (!hovered) root.pointerLeftSurface()", window)
+        self.assertIn("root.hoveringProvider = false", window)
+        self.assertIn("if (cellMouse.containsMouse) root.providerHovered(cell.index, false)", compact)
+
     def test_settings_follow_auto_hide_after_pointer_leaves(self) -> None:
         window = (ROOT / "src" / "ui" / "EdgeWindow.qml").read_text()
         self.assertIn("if (!root.autoHide || root.forcedOpen) return", window)

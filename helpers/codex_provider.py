@@ -22,7 +22,7 @@ import sys
 import tempfile
 import time
 from collections.abc import Callable, Mapping, Sequence
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Self
 
@@ -83,13 +83,13 @@ def redact_text(value: object, limit: int = 200) -> str:
 
 
 def utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def isoformat_utc(value: datetime) -> str:
     if value.tzinfo is None:
-        value = value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+        value = value.replace(tzinfo=UTC)
+    return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 
 def default_cache_path() -> Path:
@@ -316,7 +316,7 @@ def _reset_timestamp(value: object) -> str | None:
     if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
         raise ProviderError("ERROR", "Codex returned invalid quota data.")
     try:
-        return isoformat_utc(datetime.fromtimestamp(value, timezone.utc))
+        return isoformat_utc(datetime.fromtimestamp(value, UTC))
     except (OverflowError, OSError, ValueError) as exc:
         raise ProviderError("ERROR", "Codex returned invalid quota data.") from exc
 
@@ -465,12 +465,12 @@ def _parse_snapshot_time(snapshot: Mapping[str, Any]) -> datetime | None:
     if not isinstance(value, str):
         return None
     try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value)
     except ValueError:
         return None
     if parsed.tzinfo is None:
         return None
-    return parsed.astimezone(timezone.utc)
+    return parsed.astimezone(UTC)
 
 
 def _valid_cached_snapshot(snapshot: object) -> bool:
@@ -559,7 +559,7 @@ def _valid_cached_snapshot(snapshot: object) -> bool:
             if not isinstance(reset_at, str):
                 return False
             try:
-                parsed_reset = datetime.fromisoformat(reset_at.replace("Z", "+00:00"))
+                parsed_reset = datetime.fromisoformat(reset_at)
             except ValueError:
                 return False
             if parsed_reset.tzinfo is None:
@@ -582,7 +582,7 @@ def read_last_good(path: Path, now: datetime, max_age_seconds: int) -> dict[str,
             return None
         updated = _parse_snapshot_time(snapshot)
         assert updated is not None
-        age = (now.astimezone(timezone.utc) - updated).total_seconds()
+        age = (now.astimezone(UTC) - updated).total_seconds()
         if age < 0 or age > max_age_seconds:
             return None
         return copy.deepcopy(dict(snapshot))

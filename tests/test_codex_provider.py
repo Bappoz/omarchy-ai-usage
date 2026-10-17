@@ -6,7 +6,7 @@ import stat
 import sys
 import tempfile
 import unittest
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from test_contract import validate_snapshot
@@ -25,7 +25,7 @@ from helpers.codex_provider import (
 
 ROOT = Path(__file__).resolve().parents[1]
 FAKE_SERVER = ROOT / "tests" / "fakes" / "fake_codex_app_server.py"
-NOW = datetime(2030, 1, 1, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2030, 1, 1, 12, 0, tzinfo=UTC)
 
 
 def fake_collect(scenario: str, timeout: float = 2.0) -> dict:

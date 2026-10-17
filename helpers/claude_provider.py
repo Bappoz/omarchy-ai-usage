@@ -14,7 +14,7 @@ import subprocess
 import sys
 import tempfile
 from collections.abc import Callable, Mapping, Sequence
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -38,11 +38,11 @@ class ProviderError(Exception):
 
 
 def utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def isoformat_utc(value: datetime) -> str:
-    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 
 def default_cache_path() -> Path:
@@ -197,7 +197,7 @@ def _reset_at(value: object) -> str | None:
     if not isinstance(value, str):
         raise ProviderError("ERROR", "Claude returned invalid quota data.")
     try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value)
     except ValueError as exc:
         raise ProviderError("ERROR", "Claude returned invalid quota data.") from exc
     if parsed.tzinfo is None:
@@ -290,10 +290,10 @@ def _parse_time(value: object) -> datetime | None:
     if not isinstance(value, str):
         return None
     try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value)
     except ValueError:
         return None
-    return parsed.astimezone(timezone.utc) if parsed.tzinfo else None
+    return parsed.astimezone(UTC) if parsed.tzinfo else None
 
 
 def _valid_cached_snapshot(snapshot: object) -> bool:
@@ -357,7 +357,7 @@ def read_last_good(path: Path, now: datetime, max_age_seconds: int) -> dict[str,
             return None
         updated = _parse_time(snapshot.get("lastUpdated"))
         assert updated is not None
-        age = (now.astimezone(timezone.utc) - updated).total_seconds()
+        age = (now.astimezone(UTC) - updated).total_seconds()
         return copy.deepcopy(dict(snapshot)) if 0 <= age <= max_age_seconds else None
     except (OSError, UnicodeError, json.JSONDecodeError, TypeError, ValueError):
         return None

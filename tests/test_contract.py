@@ -24,7 +24,7 @@ SENSITIVE_VALUE = re.compile(
 
 
 def parse_datetime(value: str) -> None:
-    datetime.fromisoformat(value.replace("Z", "+00:00"))
+    datetime.fromisoformat(value)
 
 
 def walk(value: Any, path: str = "$") -> None:

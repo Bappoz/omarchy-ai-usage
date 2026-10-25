@@ -9,13 +9,17 @@ Item {
   property var usedPercent: null
   property bool stale: false
   property bool animationsEnabled: true
+  // False while hidden: the ring rests empty and sweeps in when revealed.
+  property bool active: true
+  property bool hovered: false
+  property bool pressed: false
   property real uiScale: 1
   property string accentColor: "auto"
   property string accessibleName: "Usage"
 
   readonly property bool hasReading: typeof usedPercent === "number" && isFinite(usedPercent)
   readonly property real safeUsed: hasReading ? Math.max(0, Math.min(100, usedPercent)) : 0
-  readonly property real targetFraction: safeUsed / 100
+  readonly property real targetFraction: active ? safeUsed / 100 : 0
   property real animatedFraction: 0
 
   readonly property real designScale: (44 / 117) * uiScale
@@ -90,5 +94,10 @@ Item {
     height: width
     providerId: root.providerId
     opacity: root.stale ? 0.45 : (root.safeUsed >= 100 ? 0.35 : 1)
+    scale: root.pressed ? 0.88 : (root.hovered ? 1.14 : 1)
+    Behavior on scale {
+      enabled: root.animationsEnabled
+      SpringAnimation { spring: 4; damping: 0.35; epsilon: 0.001 }
+    }
   }
 }

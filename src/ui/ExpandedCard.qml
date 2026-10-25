@@ -17,10 +17,12 @@ Item {
   property bool showResetTimer: true
   property bool settingsOpen: false
   property string accentColor: "auto"
+  property bool canOpenApp: false
   property real nowMs: Date.now()
   property var preferences: ({})
   signal cardHovered(bool hovered)
   signal settingsRequested()
+  signal appRequested()
   signal preferenceChanged(string key, var value)
 
   readonly property bool horizontalEdge: edge === "top" || edge === "bottom"
@@ -164,10 +166,32 @@ Item {
       width: parent.width
       spacing: root.headerGap
 
-      ProviderGlyph {
+      Item {
         Layout.preferredWidth: 46 * root.designScale
         Layout.preferredHeight: 46 * root.designScale
-        providerId: root.providerId
+
+        ProviderGlyph {
+          anchors.fill: parent
+          providerId: root.providerId
+          scale: glyphMouse.pressed ? 0.88 : (glyphMouse.containsMouse && root.canOpenApp ? 1.14 : 1)
+          Behavior on scale {
+            enabled: root.animationsEnabled
+            SpringAnimation { spring: 4; damping: 0.35; epsilon: 0.001 }
+          }
+        }
+
+        MouseArea {
+          id: glyphMouse
+          anchors.fill: parent
+          hoverEnabled: true
+          enabled: root.canOpenApp
+          cursorShape: root.canOpenApp ? Qt.PointingHandCursor : Qt.ArrowCursor
+          onClicked: root.appRequested()
+        }
+
+        Accessible.role: Accessible.Button
+        Accessible.name: "Open " + root.providerName
+        Accessible.onPressAction: if (root.canOpenApp) root.appRequested()
       }
 
       Text {

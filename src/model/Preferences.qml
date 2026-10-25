@@ -31,6 +31,7 @@ QtObject {
       "showResetTimer": true,
       "animations": true,
       "accentColor": "auto",
+      "showInsights": true,
       "enabledProviders": { "claude": true, "codex": true }
     }
   }
@@ -70,6 +71,7 @@ QtObject {
       "showResetTimer": raw.showResetTimer === undefined ? base.showResetTimer : raw.showResetTimer === true,
       "animations": raw.animations === undefined ? base.animations : raw.animations === true,
       "accentColor": Usage.validAccent(raw.accentColor),
+      "showInsights": raw.showInsights === undefined ? base.showInsights : raw.showInsights === true,
       "enabledProviders": {
         "claude": providers.claude === false
           ? false

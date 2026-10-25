@@ -43,6 +43,7 @@ Column {
       { key: "showPercentage", label: "Percentage", value: p.showPercentage === false ? "Off" : "On" },
       { key: "showResetTimer", label: "Reset time", value: p.showResetTimer === false ? "Off" : "On" },
       { key: "accentColor", label: "Accent color", value: Usage.validAccent(p.accentColor) === "auto" ? "Auto" : Usage.validAccent(p.accentColor).toUpperCase(), swatch: Usage.validAccent(p.accentColor) },
+      { key: "showInsights", label: "Insights panel", value: p.showInsights === false ? "Off" : "On" },
       { key: "animations", label: "Motion", value: p.animations === false ? "Off" : "On" }
     ]
   }

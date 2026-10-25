@@ -111,7 +111,9 @@ Item {
 
       required property var modelData
       required property int index
-      property real reveal: root.unfolded ? 1 : 0
+      // Rings wait for the silhouette to finish unfolding (openProgress is eased,
+      // so 0.995 is visually complete); folding hides them immediately.
+      property real reveal: root.unfolded && root.openProgress >= 0.995 ? 1 : 0
       readonly property real outwardX: root.edge === "right" ? 1 : (root.edge === "left" ? -1 : 0)
       readonly property real outwardY: root.edge === "bottom" ? 1 : (root.edge === "top" ? -1 : 0)
 
@@ -151,6 +153,9 @@ Item {
           usedPercent: cell.modelData.usedPercent
           stale: Boolean(cell.modelData.stale)
           animationsEnabled: root.animationsEnabled
+          active: cell.reveal > 0.01
+          hovered: cellMouse.containsMouse
+          pressed: cellMouse.pressed
           uiScale: root.uiScale
           accentColor: root.accentColor
           accessibleName: String(cell.modelData.displayName || "Provider") + " usage"
@@ -184,6 +189,7 @@ Item {
       }
 
       MouseArea {
+        id: cellMouse
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor

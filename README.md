@@ -1,85 +1,124 @@
+<div align="center">
+
 # Omarchy AI Usage
 
-A native, edge-attached AI quota surface for Omarchy, inspired by the compact interaction model and visual language of CodeNotch.
+**A native, edge-attached AI usage surface for [Omarchy](https://omarchy.org).**<br>
+Watch your Claude Code and Codex limits, see where your tokens go, and jump into the app, all from a small notch on the edge of your screen.
 
-> Release status: version 0.10.0 is ready for daily use and Omarchy Marketplace updates.
+[![CI](https://github.com/Bappoz/omarchy-ai-usage/actions/workflows/ci.yml/badge.svg)](https://github.com/Bappoz/omarchy-ai-usage/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Version](https://img.shields.io/badge/version-0.11.0-informational)
+![Omarchy](https://img.shields.io/badge/Omarchy-4.0%2B-black)
 
-![CodeNotch-faithful notch and usage card](docs/assets/codenotch-faithful-surface.png)
+<img src="docs/assets/hero.png" alt="The usage rail, a Claude usage card and the activity panel" width="760">
 
-## What it does
+<sub>Screenshots use the built-in synthetic preview data, never a real account.</sub>
 
-Omarchy already includes an Agents bar widget. This project explores a different form: a small surface attached directly to a screen edge that expands into provider details without occupying the bar.
+</div>
 
-Live mode supports Claude Code and Codex using their existing signed-in sessions. Perplexity remains available only in the explicitly labeled visual preview and is never presented as live data.
+## Features
 
-## Highlights
+**Quota at a glance**
+- One ring per provider on a slim rail that folds into the screen edge when idle.
+- The compact ring follows the shortest recognized window (for example Claude's 5-hour session); longer windows such as weekly stay in the expanded card.
+- Explicit states for active, loading, stale, sign-in required, rate-limited, error, and unavailable.
 
-- faithful black CodeNotch silhouette, provider rings, pointer-connected card, palette, and motion vocabulary;
-- top, right, bottom, and left placement with a normalized continuous offset;
-- focused, named, and all-display scopes with reconnect fallback;
-- small, medium, and large semantic sizes;
-- hover, click, and always-open rail behavior;
-- optional provider label, percentage, reset timer, and motion;
-- native in-card preferences persisted in Omarchy's own `shell.json` plugin entry;
-- immediate updates when `omarchy.agents` replaces a provider record, plus one fallback poller per enabled provider;
-- an official `omarchy.agents` refresh request when a card opens and every 30 seconds while it remains visible, rate-limited to avoid overlapping collection;
-- bounded retries with exponential backoff, auth-aware delay, and reset-aware rate-limit delay;
-- explicit active, loading, stale, authentication, rate-limited, error, and unavailable states;
-- click-on-ring manual refresh with concurrent requests collapsed into one follow-up;
-- read-only normalization of Claude and Codex records maintained by `omarchy.agents`;
-- one official usage source shared with compatible consumers such as OmaPkDex;
-- no raw provider output, account identity, or credentials in logs or screenshots;
-- local validation, portable contract tests, QML linting, and CI.
+**Pace, not just percent**
+- A marker on every quota bar shows where an even burn rate would be right now.
+- A one-line verdict projects when you would hit the limit, for example *"At this pace the limit hits in ~1d 14h"*, derived only from the reset time and window length already in the data.
+
+**Activity panel**
+- Opens beside the provider card with the current model and effort, a live indicator while it is in use, a 24-hour token sparkline with hover readout, 24h and 7-day totals, and a per-model breakdown.
+- Built from aggregates of your local Claude Code and Codex session logs. It can be turned off (see [Privacy](#privacy-and-security)).
+
+**Make it yours**
+- Any accent color (`#RRGGBB`), or the built-in provider tints and usage scale.
+- Top, right, bottom, or left edge; continuous position; focused, named, or all displays.
+- Small, medium, and large sizes; hover, click, or always-open behavior.
+
+**Motion that feels right**
+- Spring-based sweeps, entrances, and hover feedback inspired by [Sileo](https://tailkits.com/components/sileo/); rings appear only after the silhouette has finished unfolding and sweep in on every open.
+- One switch (or `OMARCHY_REDUCED_MOTION=1`) turns all of it off.
+
+**One click to the app**
+- Click a provider logo, on the rail or in the card header, to open Claude Desktop or ChatGPT, with the web app as a fallback.
+
+## Gallery
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/assets/usage-card.png" alt="Provider usage card with pace markers" width="380"><br><sub>Usage card with pace markers and verdicts</sub></td>
+    <td align="center"><img src="docs/assets/insights-panel.png" alt="Activity panel with sparkline and model breakdown" width="300"><br><sub>Activity panel</sub></td>
+  </tr>
+</table>
+
+<div align="center">
+<img src="docs/assets/unfold.gif" alt="The rail unfolding, then the card and activity panel arriving" width="480"><br>
+<sub>Hover to unfold the rail, then a ring for its card and activity panel</sub>
+</div>
+
+### Accent colors
+
+<img src="docs/assets/accent-colors.png" alt="The same surface in default, sky, violet, and rose accents" width="720">
+
+Default, `#38bdf8`, `#c084fc`, and `#ff5d8f`. Rings, bars, the sparkline, and model shares all follow the accent.
+
+### Placement
+
+<img src="docs/assets/placements.png" alt="The surface attached to the left, top, and bottom edges" width="720">
 
 ## Requirements
 
-- Omarchy 4.0 or newer with the Quickshell-based shell;
-- the built-in `omarchy.agents` widget enabled, because it owns usage collection;
-- Claude Code and/or Codex, already signed in for live usage;
-- Python 3.11 or newer;
-- `omarchy plugin validate` for platform validation.
+- Omarchy 4.0 or newer with the Quickshell-based shell.
+- The built-in `omarchy.agents` widget enabled, because it owns quota collection.
+- Claude Code and/or Codex, already signed in for live usage.
+- Python 3.11 or newer.
 
 No third-party Python or JavaScript runtime dependency is required.
 
 ## Install
 
-Install the plugin from this repository and enable it:
-
 ```sh
 omarchy plugin add https://github.com/Bappoz/omarchy-ai-usage.git --enable
 ```
 
-The notch appears at the right edge of the focused display by default. Hover
-over it to reveal the provider rail, then select a provider to open its card.
-
-If the plugin was installed previously but is disabled, enable it again:
+The notch appears at the right edge of the focused display. If the plugin was installed earlier but is disabled:
 
 ```sh
 omarchy plugin enable ai-usage.notch
 ```
 
-## Configure it
+## Quick tour
 
-Hover over the notch, open a provider, and select the sliders icon in the card. Each row cycles through its supported values. Changes are applied live and written through Omarchy's scoped plugin API.
+| Do this | You get |
+| --- | --- |
+| Hover the edge pill | The rail unfolds and each ring sweeps in |
+| Hover a ring | That provider's usage card, with pace markers and reset times |
+| Keep the pointer on the card | The activity panel slides in beside it |
+| Hover the sparkline | The token count for that hour |
+| Click a provider logo | The provider's app opens |
+| Click the sliders icon in the card | Preferences |
 
-Claude and Codex are enabled automatically. Toggle either one directly in the card—no code, API key, or manual JSON edit is required. At least one provider stays enabled.
+## Configure
 
-| Setting | Available choices | Default | What it changes |
+Open a provider card and select the sliders icon. Each row cycles through its supported values, changes apply live, and they are saved through Omarchy's scoped plugin API. Claude and Codex are enabled automatically; at least one provider stays enabled.
+
+| Setting | Choices | Default | What it changes |
 | --- | --- | --- | --- |
 | Edge | Top, right, bottom, left | Right | Which screen edge owns the notch |
 | Position | Start, center, end | Center | Where it sits along that edge |
-| Display | Focused, all, a named connector | Focused | Which display or displays show it |
+| Display | Focused, all, a named connector | Focused | Which displays show it |
 | Size | Small, medium, large | Medium | Notch, card, type, and ring scale |
 | Open behavior | Hover, click | Hover | How the rail and card open |
 | Auto-hide | On, off | On | Whether an idle rail collapses to the edge pill |
-| Refresh interval | 5, 15, 30, 60 minutes | 15 minutes | Hidden fallback reread; visible cards request official data every 30 seconds |
+| Refresh interval | 5, 15, 30, 60 minutes | 15 minutes | Hidden fallback reread; a visible card requests fresh data every 30 seconds |
 | Claude / Codex | On, off | On | Which live providers appear |
-| Provider label / percentage / reset time | On, off | Label off; others on | Compact-surface information density |
-| Motion | On, off | On | Surface transitions; turn off for a static UI |
+| Provider label / percentage / reset time | On, off | Label off; others on | Compact-surface density |
+| Accent color | Auto, seven presets, any hex via `shell.json` | Auto | Ring, bar, and chart color |
+| Insights panel | On, off | On | The activity panel beside the card |
+| Motion | On, off | On | Surface animation; off for a static UI |
 
-The card is the recommended configuration path. For an exact display connector
-or a continuous position, use the plugin entry in
-`~/.config/omarchy/shell.json` after installing the plugin:
+For an exact connector or a continuous position, edit the plugin entry in `~/.config/omarchy/shell.json`:
 
 ```json
 {
@@ -94,114 +133,101 @@ or a continuous position, use the plugin entry in
   "showProviderLabel": true,
   "showPercentage": true,
   "showResetTimer": true,
-  "animations": false,
+  "animations": true,
+  "accentColor": "#38bdf8",
+  "showInsights": true,
   "enabledProviders": { "claude": true, "codex": false }
 }
 ```
 
-Use `monitor: "focused"` for the current display or `monitor: "all"` for
-every display. `offset` accepts any value from `0.0` (start of the edge) to
-`1.0` (end of the edge); `pollingInterval` accepts 60–3600 seconds. The full
-configuration reference, including safe defaults and test-only overrides, is
-in [Configuration](docs/configuration.md).
+`offset` accepts `0.0` to `1.0` along the edge, `pollingInterval` accepts 60-3600 seconds, and `accentColor` is `auto` or a six-digit hex (anything else falls back to `auto`). The full reference, defaults, and test-only overrides are in [Configuration](docs/configuration.md).
 
-### Claude does not appear
+## How it works
 
+| Source | Used for | Access |
+| --- | --- | --- |
+| `omarchy.agents` records in `~/.local/state/omarchy/agents/usage/` | Quota windows, percentages, reset times | Read-only watch; the built-in widget is the single writer |
+| `omarchy-shell omarchy.agents refresh` | Fresh data when a card opens and every 30 seconds while visible | Fixed IPC request, single-flight, 15-second cooldown |
+| Local session logs (`~/.claude/projects`, `~/.codex/sessions`) | Activity panel | Read-only, only while the panel is visible, aggregated in a helper; can be turned off |
+| `gtk-launch` / `omarchy-launch-webapp` | Opening the app on logo click | Fixed commands, no user-controlled arguments |
+
+Authentication stays with the provider clients and quota collection stays with Omarchy, so every surface, including compatible consumers such as OmaPkDex, shows the same values. See [Architecture](docs/architecture.md) and [Provider feasibility](docs/provider-feasibility.md) for why Copilot, Gemini, and Perplexity are not exposed as live data.
+
+## Troubleshooting
+
+**Claude does not appear**
 1. Confirm the built-in **Agents** widget (`omarchy.agents`) is enabled in the bar.
 2. Confirm Claude Code is installed with `claude --version`.
-3. Sign in through Claude Code with `claude auth login` only when Claude itself reports that authentication is required.
+3. Sign in with `claude auth login` only when Claude itself reports that authentication is required.
 4. Open the card settings and make sure **Claude** is **On**.
-5. Restart the Omarchy shell after updating from a release older than 0.8.1.
+5. Restart the shell after updating from a release older than 0.8.1.
 
-The plugin does not start Claude Code, Codex, or `omarchy-agent-usage-update`. The built-in `omarchy.agents` widget is the single writer of `~/.local/state/omarchy/agents/usage/*.json`; the notch and OmaPkDex only watch and read those records. When a live card is opened, the notch sends the official `omarchy.agents refresh` IPC request and then waits for its atomic record update. Requests are collapsed and limited to one every 15 seconds. This avoids duplicate collectors and keeps every surface on the same values.
+**The activity panel says there are no logs or no activity**
+It reads the session logs written by Claude Code and Codex. If you relocated them, `CLAUDE_CONFIG_DIR` and `CODEX_HOME` are honored. A provider with no activity in the last seven days shows an empty state instead of a chart.
 
-The compact ring uses the shortest recognized quota window (for example,
-Claude's 5-hour session). Longer windows such as weekly quota remain visible in
-the expanded card. Copilot, Gemini and Perplexity are not exposed as live data
-because their currently documented sources cannot satisfy the quota contract
-without unsupported access or fabricated percentages. See
-[Provider feasibility](docs/provider-feasibility.md).
+**Clicking a logo does nothing**
+The app is launched through its desktop entry (`com.anthropic.Claude` for Claude, `chatgpt` for Codex) and falls back to the provider's web app via `omarchy-launch-webapp`. Check that one of them exists on your system.
 
-Authentication remains owned by the provider clients and collection remains owned by Omarchy. The notch never reads credential files, tokens, browser storage, or raw provider responses.
+## Update
 
-The environment variables `OMARCHY_AI_USAGE_EDGE`, `OMARCHY_AI_USAGE_OFFSET`, and `OMARCHY_AI_USAGE_SCREEN` remain temporary, non-persistent overrides for visual testing. `OMARCHY_AI_USAGE_PREVIEW=1` enables the labeled synthetic reference composition. `OMARCHY_REDUCED_MOTION=1` disables surface animation for the session.
-
-## Update safely
-
-Updates preserve your configured preferences. Run:
+Updates preserve your preferences:
 
 ```sh
 omarchy plugin update ai-usage.notch
-```
-
-Then hover over the notch and open the Claude or Codex card once to request an
-immediate refresh. The normal interval resumes afterwards. Verify the installed
-plugin is enabled with:
-
-```sh
-omarchy plugin list
-```
-
-After an update, restart the shell so nested QML components are reloaded while
-your stored settings remain in place:
-
-```sh
 omarchy restart shell
 ```
 
-Do not use `omarchy refresh shell` for normal plugin updates: it resets shell
-configuration rather than updating this plugin.
-
-## Validation
-
-Run the complete local gate:
-
-```sh
-make check
-```
-
-The gate runs unit and contract tests, Python linting, QML linting, and the official Omarchy plugin validator. CI runs the portable subset on every push and pull request.
-
-To probe only the normalized shared provider output:
-
-```sh
-python helpers/omarchy_agent_provider.py --provider claude
-python helpers/omarchy_agent_provider.py --provider codex
-```
-
-Provider problems are represented as safe status objects and still exit successfully. Invalid command-line arguments exit with code 2.
+Then open a provider card once to request an immediate refresh. Do not use `omarchy refresh shell` for plugin updates: it resets shell configuration instead of updating this plugin. Verify the installed plugin with `omarchy plugin list`.
 
 ## Remove
-
-Remove the plugin with Omarchy's normal lifecycle command:
 
 ```sh
 omarchy plugin remove ai-usage.notch
 ```
 
-Marketplace maintainers validate the current public commit before approval. The repository includes a root `preview.png`, license, safe lifecycle instructions, and the official validator gate. See [Marketplace publishing](docs/marketplace-publishing.md).
+## Development
 
-See [Release readiness](docs/release-readiness.md) for the checks to complete before tagging a public release.
+```sh
+make check
+```
 
-## Repository layout
+runs unit and contract tests, Python linting, QML linting, and the official Omarchy plugin validator. CI runs the portable subset on every push and pull request.
+
+Probe the helpers directly:
+
+```sh
+python helpers/omarchy_agent_provider.py --provider claude   # normalized quota snapshot
+python helpers/insights_provider.py --provider claude        # activity aggregates
+```
+
+Provider problems are reported as safe status objects and still exit successfully; invalid arguments exit with code 2. `OMARCHY_AI_USAGE_PREVIEW=1` enables the labeled synthetic composition used for the screenshots above.
 
 ```text
 .
 ├── manifest.json
 ├── contracts/provider-snapshot.schema.json
-├── helpers/omarchy_agent_provider.py
+├── helpers/            # quota normalization and activity aggregation
 ├── src/
-│   ├── model/
-│   ├── ui/
+│   ├── model/          # stores, runners, preferences, app launcher
+│   ├── ui/             # rail, ring, card, activity panel, settings
 │   └── Main.qml
 ├── tests/
 └── docs/
 ```
 
+Marketplace maintainers validate the current public commit before approval; see [Marketplace publishing](docs/marketplace-publishing.md) and [Release readiness](docs/release-readiness.md).
+
 ## Privacy and security
 
-The repository contains no real provider output or account data. Authentication stays inside Claude Code and Codex. Omarchy writes normalized quota records, and this plugin reads only those records; it never opens credential files or launches a provider client. Snapshots contain usage windows, percentages, reset times, and an optional plan label—never tokens or account identifiers. See [Security policy](SECURITY.md).
+Omarchy plugins are not sandboxed, so this one keeps a narrow, documented data boundary:
+
+- It never reads credential files, tokens, browser storage, or raw provider responses, and it never starts Claude Code, Codex, or the usage collector. It launches an app only when you click its logo.
+- Quota snapshots contain usage windows, percentages, reset times, and an optional plan label, never tokens or account identifiers.
+- The activity panel is the one exception to "records only". Session logs contain conversations, so the helper keeps only a timestamp, model name, effort label, and token counts per request, and emits aggregates. Prompts, tool output, file paths, and session ids never leave it, and a test asserts that conversation text does not appear in its output. Disable the panel with `showInsights: false`.
+- The repository contains no real provider output or account data.
+
+See the [Security policy](SECURITY.md) for the full model.
 
 ## License and attribution
 
-MIT. CodeNotch-derived visual geometry and bundled provider marks retain their respective attribution in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+MIT. CodeNotch-derived visual geometry and bundled provider marks retain their attribution in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [docs/acknowledgements.md](docs/acknowledgements.md). Motion design is inspired by [Sileo](https://tailkits.com/components/sileo/).

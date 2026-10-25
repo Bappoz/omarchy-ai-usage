@@ -8,7 +8,7 @@ Milestone 5 now treats CodeNotch revision `ec1a7e3fc0634f668741cb0357029420bdd42
 - a 70 px side body around 44 px provider rings at medium scale;
 - inverse rounded ends that weld the surface to the physical screen edge;
 - white primary text, `#808080` secondary text, `#303030` ring tracks, and `#2D2D2D` bar tracks;
-- green `#00FF88` below 50% used, yellow `#F2FF00` from 50%, and orange `#FF3F00` from 70%;
+- green `#00FF88` below 50% used, yellow `#F2FF00` from 50%, and orange `#FF3F00` from 70% by default; `accentColor` replaces this scale with one chosen `#RRGGBB`;
 - Claude, OpenAI/Codex, and Perplexity provider marks;
 - one black tooltip with a curved, welded pointer and linear quota rows;
 - compact and detailed readings consistently expressed as percent used.
@@ -23,7 +23,8 @@ The motion vocabulary follows the reference rather than using unrelated fades:
 - cells enter toward the desktop with a 45 ms stagger;
 - the tooltip has a 250 ms hover grace period so the pointer can cross the gap;
 - the same tooltip travels between provider cells over 500 ms;
-- ring and bar readings sweep to new measurements over 900 ms.
+- ring and bar readings settle to new measurements with a lightly overshooting spring (Sileo-inspired) instead of a fixed-duration ease;
+- the card enters with a spring scale and its quota rows rise in a 60 ms stagger.
 
 At rest, the expanded geometry folds into a small black handle. The provider cells remain laid out at their final positions and are revealed by the opening silhouette, avoiding reflow during animation.
 

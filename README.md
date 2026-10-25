@@ -2,7 +2,7 @@
 
 A native, edge-attached AI quota surface for Omarchy, inspired by the compact interaction model and visual language of CodeNotch.
 
-> Release status: version 0.9.0 is ready for daily use and Omarchy Marketplace updates.
+> Release status: version 0.10.0 is ready for daily use and Omarchy Marketplace updates.
 
 ![CodeNotch-faithful notch and usage card](docs/assets/codenotch-faithful-surface.png)
 

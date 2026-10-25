@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.0
+
+- Add `accentColor` (`auto` or any `#RRGGBB`) to recolor rings and bars, with an in-card preset selector.
+- Show a pace marker on every quota bar and a burn-rate verdict per window, derived only from the reset time and window length already in the provider contract.
+- Add a status badge to the card header for stale, rate-limited, sign-in, and error states.
+- Replace the eased ring/bar sweep and card entrance with Sileo-inspired springs and a staggered row entrance; reduced-motion and the Motion toggle still disable them.
+- Give the opt-in preview data relative reset times so the new readings can be exercised.
+
 ## 0.9.0
 
 - Make compact Claude usage follow the shortest recognized window instead of whichever window has the highest percentage.

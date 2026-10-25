@@ -12,6 +12,7 @@ Item {
   property bool animationsEnabled: true
   property bool showProviderLabel: false
   property bool showPercentage: true
+  property string accentColor: "auto"
 
   signal surfaceHovered(bool hovered)
   signal providerHovered(int index, bool hovered)
@@ -151,6 +152,7 @@ Item {
           stale: Boolean(cell.modelData.stale)
           animationsEnabled: root.animationsEnabled
           uiScale: root.uiScale
+          accentColor: root.accentColor
           accessibleName: String(cell.modelData.displayName || "Provider") + " usage"
         }
 

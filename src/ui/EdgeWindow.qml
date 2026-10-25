@@ -81,6 +81,10 @@ PanelWindow {
     return result
   }
 
+  function previewReset(minutes) {
+    return new Date(Date.now() + minutes * 60000).toISOString()
+  }
+
   function previewProviders() {
     var claude = {
       "schemaVersion": 1,
@@ -88,8 +92,8 @@ PanelWindow {
       "displayName": "Claude",
       "status": "ACTIVE",
       "windows": [
-        { "id": "session", "name": "Current session", "usedPercent": 73, "remainingPercent": 27, "resetCopy": "Resets in 51 min" },
-        { "id": "models", "name": "All models", "usedPercent": 7, "remainingPercent": 93, "resetCopy": "Resets Thu 12:00 AM" }
+        { "id": "session", "name": "Current session", "usedPercent": 73, "remainingPercent": 27, "resetCopy": "Resets in 51 min", "resetAt": previewReset(51), "durationMinutes": 300 },
+        { "id": "models", "name": "All models", "usedPercent": 7, "remainingPercent": 93, "resetCopy": "Resets Thu 12:00 AM", "resetAt": previewReset(4300), "durationMinutes": 10080 }
       ],
       "message": null
     }
@@ -99,8 +103,8 @@ PanelWindow {
       "displayName": "Codex",
       "status": "ACTIVE",
       "windows": [
-        { "id": "five-hour", "name": "5-hour limit", "usedPercent": 21, "remainingPercent": 79, "resetCopy": "Resets in 3h 12 min" },
-        { "id": "weekly", "name": "Weekly", "usedPercent": 34, "remainingPercent": 66, "resetCopy": "Resets Mon 9:00 AM" }
+        { "id": "five-hour", "name": "5-hour limit", "usedPercent": 21, "remainingPercent": 79, "resetCopy": "Resets in 3h 12 min", "resetAt": previewReset(192), "durationMinutes": 300 },
+        { "id": "weekly", "name": "Weekly", "usedPercent": 34, "remainingPercent": 66, "resetCopy": "Resets Mon 9:00 AM", "resetAt": previewReset(6000), "durationMinutes": 10080 }
       ],
       "message": null
     }
@@ -110,7 +114,7 @@ PanelWindow {
       "displayName": "Perplexity",
       "status": "ACTIVE",
       "windows": [
-        { "id": "queries", "name": "Pro searches", "usedPercent": 52, "remainingPercent": 48, "resetCopy": "Resets tomorrow" }
+        { "id": "queries", "name": "Pro searches", "usedPercent": 52, "remainingPercent": 48, "resetCopy": "Resets tomorrow", "resetAt": previewReset(1200), "durationMinutes": 1440 }
       ],
       "message": null
     }
@@ -251,6 +255,7 @@ PanelWindow {
     animationsEnabled: root.motionEnabled
     showProviderLabel: root.preferences.showProviderLabel === true
     showPercentage: root.preferences.showPercentage !== false
+    accentColor: String(root.preferences.accentColor || "auto")
 
     onSurfaceHovered: function(hovered) {
       root.hoveringSurface = hovered
@@ -290,7 +295,7 @@ PanelWindow {
     height: implicitHeight
     visible: root.showCard || opacity > 0
     opacity: root.showCard ? 1 : 0
-    scale: root.showCard ? 1 : 0.985
+    scale: root.showCard ? 1 : 0.92
     edge: root.edge
     tailCenter: root.horizontalEdge
       ? notch.x + notch.providerCenter(root.hoveredIndex) - x
@@ -302,6 +307,7 @@ PanelWindow {
     uiScale: root.sizeScale
     animationsEnabled: root.motionEnabled
     showResetTimer: root.preferences.showResetTimer !== false
+    accentColor: String(root.preferences.accentColor || "auto")
     settingsOpen: root.settingsOpen
     preferences: root.preferences
     onSettingsRequested: {
@@ -328,7 +334,8 @@ PanelWindow {
       NumberAnimation { duration: root.motionEnabled ? 180 : 0; easing.type: Easing.OutCubic }
     }
     Behavior on scale {
-      NumberAnimation { duration: root.motionEnabled ? 180 : 0; easing.type: Easing.OutCubic }
+      enabled: root.motionEnabled
+      SpringAnimation { spring: 3.2; damping: 0.3; epsilon: 0.001 }
     }
   }
 

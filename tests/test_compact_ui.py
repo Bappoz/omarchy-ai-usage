@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -88,13 +90,13 @@ class CompactUiTests(unittest.TestCase):
     def test_codenotch_palette_and_used_thresholds_are_exact(self) -> None:
         source = "\n".join(
             (ROOT / "src" / "ui" / name).read_text()
-            for name in ("EdgeNotchSurface.qml", "ExpandedCard.qml", "UsageRing.qml")
+            for name in ("EdgeNotchSurface.qml", "ExpandedCard.qml", "UsageRing.qml", "Usage.js")
         )
         for color in ("#000000", "#303030", "#2d2d2d", "#00ff88", "#f2ff00", "#ff3f00"):
             with self.subTest(color=color):
                 self.assertIn(color, source)
-        self.assertIn("safeUsed < 50", source)
-        self.assertIn("safeUsed < 70", source)
+        self.assertIn("used < 50", source)
+        self.assertIn("used < 70", source)
         self.assertNotIn("Color.background", source)
 
     def test_expanded_view_uses_codenotch_inspired_linear_windows(self) -> None:
@@ -143,7 +145,8 @@ class CompactUiTests(unittest.TestCase):
         self.assertIn("cell.index * 45", compact)
         self.assertIn("interval: 250", window)
         self.assertIn("duration: root.motionEnabled ? 500 : 0", window)
-        self.assertIn("duration: root.animationsEnabled ? 900 : 0", ring)
+        self.assertIn("enabled: root.animationsEnabled", ring)
+        self.assertIn("SpringAnimation", ring)
 
     def test_settings_follow_auto_hide_after_pointer_leaves(self) -> None:
         window = (ROOT / "src" / "ui" / "EdgeWindow.qml").read_text()
@@ -152,6 +155,44 @@ class CompactUiTests(unittest.TestCase):
         self.assertIn("root.settingsOpen = false", window)
         self.assertIn("root.heldOpen = false", window)
         self.assertNotIn("root.heldOpen = true\n        if (root.hoveredIndex", window)
+
+
+class UsageHelpersTests(unittest.TestCase):
+    """Runs the pure helpers in Usage.js under node; skipped when node is absent."""
+
+    def run_js(self, expression: str) -> object:
+        node = shutil.which("node")
+        if node is None:
+            self.skipTest("node not available")
+        source = (ROOT / "src" / "ui" / "Usage.js").read_text().replace(".pragma library", "")
+        script = f"{source}\nconsole.log(JSON.stringify({expression}))"
+        result = subprocess.run([node, "-e", script], capture_output=True, text=True, check=True)
+        return json.loads(result.stdout)
+
+    def test_accent_accepts_only_six_digit_hex(self) -> None:
+        self.assertEqual(self.run_js('validAccent("#7C9CFF")'), "#7c9cff")
+        for bad in ("red", "#fff", "#gggggg", "", "javascript:1"):
+            with self.subTest(bad=bad):
+                self.assertEqual(self.run_js(f"validAccent({json.dumps(bad)})"), "auto")
+
+    def test_custom_accent_replaces_threshold_scale(self) -> None:
+        self.assertEqual(self.run_js('usageColor(10, "auto")'), "#00ff88")
+        self.assertEqual(self.run_js('usageColor(90, "auto")'), "#ff3f00")
+        self.assertEqual(self.run_js('usageColor(90, "#7c9cff")'), "#7c9cff")
+        self.assertEqual(self.run_js('usageColor(null, "#7c9cff")'), "#808080")
+
+    def test_pace_projects_limit_before_reset(self) -> None:
+        window = '{usedPercent: 60, resetAt: "2026-01-01T05:00:00Z", durationMinutes: 300}'
+        now = 'Date.parse("2026-01-01T03:00:00Z")'  # 60% elapsed
+        self.assertEqual(self.run_js(f"pace({window}, {now})")["tone"], "ok")
+        fast = '{usedPercent: 60, resetAt: "2026-01-01T05:00:00Z", durationMinutes: 300}'
+        early = 'Date.parse("2026-01-01T00:30:00Z")'  # 10% elapsed, 60% used
+        result = self.run_js(f"pace({fast}, {early})")
+        self.assertEqual(result["tone"], "over")
+        self.assertIn("~", result["text"])
+
+    def test_pace_is_null_without_reset_metadata(self) -> None:
+        self.assertIsNone(self.run_js("pace({usedPercent: 50, resetAt: null, durationMinutes: null}, 0)"))
 
 
 if __name__ == "__main__":

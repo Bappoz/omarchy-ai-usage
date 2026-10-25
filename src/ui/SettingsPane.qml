@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import "Usage.js" as Usage
 
 Column {
   id: root
@@ -41,6 +42,7 @@ Column {
       { key: "showProviderLabel", label: "Provider label", value: p.showProviderLabel === true ? "On" : "Off" },
       { key: "showPercentage", label: "Percentage", value: p.showPercentage === false ? "Off" : "On" },
       { key: "showResetTimer", label: "Reset time", value: p.showResetTimer === false ? "Off" : "On" },
+      { key: "accentColor", label: "Accent color", value: Usage.validAccent(p.accentColor) === "auto" ? "Auto" : Usage.validAccent(p.accentColor).toUpperCase(), swatch: Usage.validAccent(p.accentColor) },
       { key: "animations", label: "Motion", value: p.animations === false ? "Off" : "On" }
     ]
   }
@@ -71,6 +73,7 @@ Column {
         preferenceChanged("autoHide", false)
       }
     }
+    else if (key === "accentColor") preferenceChanged(key, nextIn(Usage.PRESETS, Usage.validAccent(p.accentColor)))
     else if (key === "pollingInterval") preferenceChanged(key, nextIn([300, 900, 1800, 3600], Number(p.pollingInterval)))
     else preferenceChanged(key, p[key] === false)
   }
@@ -99,6 +102,19 @@ Column {
           color: "#d8d8d8"
           font.family: "sans-serif"
           font.pixelSize: 10 * root.uiScale
+        }
+
+        Rectangle {
+          visible: row.modelData.swatch !== undefined
+          Layout.preferredWidth: 9 * root.uiScale
+          Layout.preferredHeight: 9 * root.uiScale
+          radius: width / 2
+          color: row.modelData.swatch === "auto" || row.modelData.swatch === undefined
+            ? "transparent"
+            : row.modelData.swatch
+          border.width: row.modelData.swatch === "auto" ? 1 : 0
+          border.color: "#808080"
+          Behavior on color { ColorAnimation { duration: 200 } }
         }
 
         Text {

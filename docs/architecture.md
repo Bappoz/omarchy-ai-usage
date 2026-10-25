@@ -48,6 +48,8 @@ Placement is represented as an edge, normalized offset, and screen selector. `Va
 
 The built-in `omarchy.agents` widget is the only collector and writer. It atomically maintains schema-version-1 records under `$XDG_STATE_HOME/omarchy/agents/usage/`. A single bounded standard-library helper validates and normalizes the Claude and Codex records into this plugin's provider-neutral snapshot contract. File watchers trigger immediate rereads after official updates; a fallback timer covers missed events. Opening a live card sends a bounded IPC refresh request to `omarchy.agents`, and a visible card repeats that request every 30 seconds. The notch never starts provider clients or the Omarchy updater itself.
 
+The activity panel adds one more bounded helper, `helpers/insights_provider.py`, which `InsightsRunner` runs single-flight (15-second cooldown) while a card and its panel are visible. It streams the local Claude Code and Codex session logs and prints only aggregates (24 hourly token totals, per-model totals, the latest model and effort); conversation text never leaves the helper. `AppLauncher` opens a provider's app on logo click from a fixed table, using `gtk-launch` and falling back to `omarchy-launch-webapp`.
+
 QML consumes only helper stdout and never logs provider output or stderr. A malformed snapshot becomes a static `ERROR` state without disrupting other providers. Synthetic multi-provider data can be selected only through `OMARCHY_AI_USAGE_PREVIEW=1`, and its expanded card visibly labels that mode. Normal operation renders only provider snapshots backed by real adapters.
 
 ## Persistence

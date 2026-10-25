@@ -28,6 +28,10 @@ $XDG_STATE_HOME/omarchy/agents/usage/claude.json
 $XDG_STATE_HOME/omarchy/agents/usage/codex.json
 ```
 
+**Insights panel exception.** The activity panel beside the card (opt out with `showInsights: false`) is the one place that reads beyond the `omarchy.agents` records. While it is visible, `helpers/insights_provider.py` streams, read-only, the local session logs `~/.claude/projects/**/*.jsonl` and `~/.codex/sessions/**/*.jsonl` (honoring `CLAUDE_CONFIG_DIR` and `CODEX_HOME`). These logs contain conversations, so the helper keeps only a timestamp, a model name, an effort label, and token counts per request, and prints aggregates (24 hourly totals, per-model totals). Prompts, tool output, file paths, and session identifiers never leave the helper, and a test asserts that conversation text does not appear in its output. It considers only regular non-symlink files modified in the last seven days (at most 500 files, 256 MiB each) and runs single-flight with a 15-second cooldown.
+
+Clicking a provider logo launches the app through the fixed commands `gtk-launch <desktop-id>` (`com.anthropic.Claude`, `chatgpt`) or, if the entry is missing, `omarchy-launch-webapp <url>`. Neither command receives user-controlled arguments.
+
 When a live card is visible, the plugin may invoke the fixed command
 `omarchy-shell omarchy.agents refresh`. This is an IPC request to the built-in
 owner; it does not pass user-controlled arguments, access credentials, or

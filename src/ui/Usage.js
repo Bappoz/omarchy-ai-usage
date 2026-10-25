@@ -66,3 +66,120 @@ function pace(window, nowMs) {
   }
   return { tone: used / 100 > elapsed + 0.1 ? "warn" : "ok", text: "On pace to last until reset" }
 }
+
+var PROVIDER_TINTS = { claude: "#d97757", codex: "#74aa9c" }
+
+// Charts and model shares take the custom accent when set, otherwise the
+// provider's own tint (the usage-threshold scale only makes sense for quotas).
+function chartColor(providerId, accent) {
+  var custom = validAccent(accent)
+  if (custom !== AUTO) return custom
+  return PROVIDER_TINTS[providerId] || "#00ff88"
+}
+
+function compactNumber(value) {
+  var n = Number(value)
+  if (!isFinite(n) || n < 0) return "—"
+  var units = ["", "K", "M", "B"], i = 0
+  while (n >= 999.5 && i < units.length - 1) { n /= 1000; i++ }
+  var text = i === 0 || n >= 10 ? String(Math.round(n)) : String(Math.round(n * 10) / 10)
+  return text + units[i]
+}
+
+// "claude-sonnet-5-5" -> "Sonnet 5.5", "gpt-6-luna" -> "GPT-6 Luna".
+function modelLabel(name) {
+  var parts = String(name || "").split("-").filter(function(part) { return part.length > 0 })
+  if (parts[0] === "claude") parts.shift()
+  while (parts.length > 1 && /^\d{8}$/.test(parts[parts.length - 1])) parts.pop()
+  var out = []
+  for (var i = 0; i < parts.length; i++) {
+    var part = parts[i]
+    if (/^\d{1,2}$/.test(part)) {
+      var version = part
+      while (i + 1 < parts.length && /^\d{1,2}$/.test(parts[i + 1])) { version += "." + parts[i + 1]; i++ }
+      out.push(version)
+    } else {
+      out.push(part === "gpt" ? "GPT" : part.charAt(0).toUpperCase() + part.slice(1))
+    }
+  }
+  var label = out.join(" ")
+  return label.indexOf("GPT ") === 0 ? "GPT-" + label.slice(4) : (label || "Unknown")
+}
+
+function fmt(n) { return Math.round(n * 100) / 100 }
+
+// Smooth (Catmull-Rom -> cubic Bezier) area/line paths for a sparkline. Control
+// points are clamped to the plot so the curve never dips under the baseline.
+function smoothPath(values, width, height) {
+  var count = values.length
+  if (count < 2 || !(width > 0) || !(height > 0)) return { line: "", area: "", points: [] }
+  var max = 1
+  for (var i = 0; i < count; i++) max = Math.max(max, Number(values[i]) || 0)
+  var top = 3, bottom = height - 1.5
+  var points = []
+  for (i = 0; i < count; i++) {
+    points.push({ x: width * i / (count - 1), y: bottom - ((Number(values[i]) || 0) / max) * (bottom - top) })
+  }
+  function clampY(y) { return Math.max(top, Math.min(bottom, y)) }
+  var line = "M " + fmt(points[0].x) + " " + fmt(points[0].y)
+  for (i = 0; i < count - 1; i++) {
+    var p0 = points[Math.max(0, i - 1)], p1 = points[i], p2 = points[i + 1]
+    var p3 = points[Math.min(count - 1, i + 2)]
+    line += " C " + fmt(p1.x + (p2.x - p0.x) / 6) + " " + fmt(clampY(p1.y + (p2.y - p0.y) / 6))
+      + " " + fmt(p2.x - (p3.x - p1.x) / 6) + " " + fmt(clampY(p2.y - (p3.y - p1.y) / 6))
+      + " " + fmt(p2.x) + " " + fmt(p2.y)
+  }
+  return {
+    line: line,
+    area: line + " L " + fmt(width) + " " + fmt(height) + " L 0 " + fmt(height) + " Z",
+    points: points
+  }
+}
+
+function hourLabel(isoStart) {
+  var date = new Date(String(isoStart))
+  if (isNaN(date.getTime())) return ""
+  var hours = date.getHours()
+  return (hours < 10 ? "0" : "") + hours + ":00"
+}
+
+// Validates a helper document before the UI trusts it.
+function isInsights(value, providerId) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false
+  if (value.schemaVersion !== 1 || String(value.providerId || "") !== providerId) return false
+  if (!Array.isArray(value.hourly) || value.hourly.length !== 24) return false
+  for (var i = 0; i < value.hourly.length; i++) {
+    var bucket = value.hourly[i]
+    if (!bucket || typeof bucket.tokens !== "number" || !isFinite(bucket.tokens) || bucket.tokens < 0) return false
+  }
+  if (!Array.isArray(value.models) || value.models.length > 12) return false
+  for (i = 0; i < value.models.length; i++) {
+    var model = value.models[i]
+    if (!model || typeof model.name !== "string" || typeof model.tokens !== "number"
+        || typeof model.share !== "number") return false
+  }
+  return Boolean(value.totals) && typeof value.totals === "object"
+}
+
+function agoLabel(iso, nowMs) {
+  var at = new Date(String(iso)).getTime()
+  if (isNaN(at)) return ""
+  var minutes = Math.max(0, (nowMs - at) / 60000)
+  if (minutes < 2) return "now"
+  if (minutes < 60) return Math.round(minutes) + "m ago"
+  if (minutes < 24 * 60) return Math.round(minutes / 60) + "h ago"
+  return Math.round(minutes / (24 * 60)) + "d ago"
+}
+
+// Keeps the list readable: the first max-1 models plus one merged "Other".
+function collapseModels(models, max) {
+  var list = Array.isArray(models) ? models : []
+  if (list.length <= max) return list
+  var kept = list.slice(0, max - 1), tokens = 0, share = 0
+  for (var i = max - 1; i < list.length; i++) {
+    tokens += Number(list[i].tokens) || 0
+    share += Number(list[i].share) || 0
+  }
+  kept.push({ name: "other", tokens: tokens, share: share })
+  return kept
+}

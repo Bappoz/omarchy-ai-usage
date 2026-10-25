@@ -79,6 +79,13 @@ Item {
     enabledProviders: root.preferenceValues.enabledProviders || ({ "claude": true, "codex": true })
   }
 
+  InsightsStore {
+    id: insightsStore
+    previewMode: providerStore.previewMode
+  }
+
+  AppLauncher { id: appLauncher }
+
   Preferences {
     id: preferenceStore
     shell: root.shell
@@ -99,6 +106,11 @@ Item {
       providerReady: providerStore.ready
       loading: providerStore.loading
       previewMode: providerStore.previewMode
+      insights: insightsStore.docs
+      insightFailures: insightsStore.failures
+      openableApps: appLauncher.apps
+      onInsightsRequested: function(providerId) { insightsStore.refresh(providerId) }
+      onAppRequested: function(providerId) { appLauncher.open(providerId) }
       onRefreshRequested: function(providerId) { providerStore.refresh(providerId) }
       onPreferenceChanged: function(key, value) { preferenceStore.update(key, value) }
     }

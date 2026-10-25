@@ -195,5 +195,100 @@ class UsageHelpersTests(unittest.TestCase):
         self.assertIsNone(self.run_js("pace({usedPercent: 50, resetAt: null, durationMinutes: null}, 0)"))
 
 
+class InsightsHelpersTests(unittest.TestCase):
+    """Chart, formatting and validation helpers (same node harness)."""
+
+    run_js = UsageHelpersTests.run_js
+
+    def test_compact_numbers_and_model_labels(self) -> None:
+        self.assertEqual(self.run_js("compactNumber(5859345)"), "5.9M")
+        self.assertEqual(self.run_js("compactNumber(999600)"), "1M")
+        self.assertEqual(self.run_js("compactNumber(340)"), "340")
+        self.assertEqual(self.run_js("compactNumber(-1)"), "\u2014")
+        for raw, label in (
+            ("claude-sonnet-5-5", "Sonnet 5.5"),
+            ("gpt-6-luna", "GPT-6 Luna"),
+            ("claude-3-5-sonnet-20241022", "3.5 Sonnet"),
+            ("", "Unknown"),
+        ):
+            with self.subTest(raw=raw):
+                self.assertEqual(self.run_js(f"modelLabel({json.dumps(raw)})"), label)
+
+    def test_smooth_path_never_leaves_the_plot(self) -> None:
+        segments = self.run_js(
+            '(function(){var p=smoothPath([0,9,0,9,0],100,40);'
+            'return p.line.split(" C ").slice(1).map(function(s){var a=s.split(" ").map(Number);return [a[1],a[3],a[5]]})})()'
+        )
+        self.assertEqual(len(segments), 4)
+        for control_ys in segments:
+            for y in control_ys:
+                self.assertTrue(3 <= y <= 38.5, y)
+        self.assertEqual(self.run_js("smoothPath([1],100,40).line"), "")
+
+    def test_insights_document_is_validated_before_use(self) -> None:
+        hourly = ", ".join('{tokens: 1}' for _ in range(24))
+        good = f'{{schemaVersion: 1, providerId: "claude", hourly: [{hourly}], models: [], totals: {{}}}}'
+        self.assertTrue(self.run_js(f'isInsights({good}, "claude")'))
+        self.assertFalse(self.run_js(f'isInsights({good}, "codex")'))
+        self.assertFalse(self.run_js('isInsights({schemaVersion: 1, providerId: "claude", hourly: [], models: [], totals: {}}, "claude")'))
+        self.assertFalse(self.run_js('isInsights(null, "claude")'))
+
+    def test_long_model_lists_collapse_into_other(self) -> None:
+        merged = self.run_js(
+            '(function(){var m=[1,2,3,4,5,6].map(function(i){return {name:"m"+i,tokens:i,share:0.1*i}});'
+            'return collapseModels(m,4)})()'
+        )
+        self.assertEqual([m["name"] for m in merged], ["m1", "m2", "m3", "other"])
+        self.assertEqual(merged[-1]["tokens"], 15)
+        self.assertAlmostEqual(merged[-1]["share"], 1.5)
+
+
+class InsightsWiringTests(unittest.TestCase):
+    def read(self, *parts: str) -> str:
+        return (ROOT.joinpath("src", *parts)).read_text()
+
+    def test_rings_wait_for_the_silhouette_to_finish_unfolding(self) -> None:
+        compact = self.read("ui", "CompactNotch.qml")
+        ring = self.read("ui", "UsageRing.qml")
+        self.assertIn("root.unfolded && root.openProgress >= 0.995 ? 1 : 0", compact)
+        self.assertIn("active: cell.reveal > 0.01", compact)
+        self.assertIn("active ? safeUsed / 100 : 0", ring)
+
+    def test_clicking_a_logo_opens_the_app_instead_of_refreshing(self) -> None:
+        window = self.read("ui", "EdgeWindow.qml")
+        block = window.split("onProviderActivated: function(index) {")[1].split("\n    }")[0]
+        self.assertIn("root.appRequested(", block)
+        self.assertNotIn("refreshRequested", block)
+        self.assertIn("onAppRequested: function(providerId) { appLauncher.open(providerId) }", self.read("Main.qml"))
+        self.assertIn("onClicked: root.appRequested()", self.read("ui", "ExpandedCard.qml"))
+
+    def test_app_launcher_uses_a_fixed_table_with_a_web_fallback(self) -> None:
+        launcher = self.read("model", "AppLauncher.qml")
+        self.assertIn('"desktop": "com.anthropic.Claude"', launcher)
+        self.assertIn('["gtk-launch", app.desktop]', launcher)
+        self.assertIn('["omarchy-launch-webapp", root.pendingUrl]', launcher)
+        self.assertNotIn("preferences", launcher)
+        self.assertIn("primary.running || fallback.running", launcher)
+
+    def test_insights_panel_is_optional_and_keeps_the_card_open_while_hovered(self) -> None:
+        window = self.read("ui", "EdgeWindow.qml")
+        self.assertIn("preferences.showInsights !== false", window)
+        self.assertIn("root.hoveringCard || root.hoveringPanel) return", window)
+        self.assertIn("insightsPanel.opacity > 0", window)
+        self.assertIn('"showInsights"', self.read("model", "Preferences.qml"))
+        self.assertIn("Insights panel", self.read("ui", "SettingsPane.qml"))
+
+    def test_insights_runner_is_single_flight_cooldown_bounded_and_validates_output(self) -> None:
+        runner = self.read("model", "InsightsRunner.qml")
+        self.assertIn("root.refreshPending = true", runner)
+        self.assertIn("cooldownMs: 15000", runner)
+        self.assertIn("Usage.isInsights(parsed, root.providerId)", runner)
+        self.assertIn('"--provider", root.providerId', runner)
+        self.assertNotIn("console.log", runner)
+        window = self.read("ui", "EdgeWindow.qml")
+        self.assertIn("interval: 60000", window)
+        self.assertIn("running: root.showInsights && !root.previewMode", window)
+
+
 if __name__ == "__main__":
     unittest.main()

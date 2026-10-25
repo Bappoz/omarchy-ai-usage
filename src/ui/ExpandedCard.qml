@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Shapes
+import "Usage.js" as Usage
 
 Item {
   id: root
@@ -15,6 +16,8 @@ Item {
   property bool animationsEnabled: true
   property bool showResetTimer: true
   property bool settingsOpen: false
+  property string accentColor: "auto"
+  property real nowMs: Date.now()
   property var preferences: ({})
   signal cardHovered(bool hovered)
   signal settingsRequested()
@@ -49,6 +52,10 @@ Item {
   implicitWidth: horizontalEdge ? bodyWidth : bodyWidth + tailLength
   implicitHeight: horizontalEdge ? bodyHeight + tailLength : bodyHeight
 
+  readonly property color badgeColor: status === "RATE_LIMITED" || status === "ERROR" || status === "NEEDS_AUTH"
+    ? "#ff3f00"
+    : (status === "STALE" ? "#f2ff00" : "#808080")
+
   function statusLabel() {
     if (root.loading && root.status === "LOADING") return "Reading usage"
     if (root.status === "ACTIVE") return "Active"
@@ -61,19 +68,12 @@ Item {
     return "Usage unavailable"
   }
 
-  function usedPercent(window) {
-    if (window && typeof window.usedPercent === "number" && isFinite(window.usedPercent)) {
-      return Math.max(0, Math.min(100, window.usedPercent))
-    }
-    if (window && typeof window.remainingPercent === "number" && isFinite(window.remainingPercent)) {
-      return Math.max(0, Math.min(100, 100 - window.remainingPercent))
-    }
-    return null
-  }
+  function usedPercent(window) { return Usage.usedPercent(window) }
 
-  function usageColor(used) {
-    if (used === null) return "#808080"
-    return used < 50 ? "#00ff88" : (used < 70 ? "#f2ff00" : "#ff3f00")
+  function usageColor(used) { return Usage.usageColor(used, root.accentColor) }
+
+  function toneColor(tone) {
+    return tone === "over" ? "#ff3f00" : (tone === "warn" ? "#f2ff00" : "#808080")
   }
 
   function formatReset(window) {
@@ -114,6 +114,13 @@ Item {
     return "M 0 0 C " + (w * 0.25) + " 0 " + (w * 0.38) + " " + (h * 0.58)
       + " " + (w / 2) + " " + h
       + " C " + (w * 0.62) + " " + (h * 0.58) + " " + (w * 0.75) + " 0 " + w + " 0 Z"
+  }
+
+  Timer {
+    interval: 30000
+    repeat: true
+    running: root.visible
+    onTriggered: root.nowMs = Date.now()
   }
 
   Shape {
@@ -211,6 +218,26 @@ Item {
         Accessible.onPressAction: root.settingsRequested()
       }
 
+      Rectangle {
+        visible: !root.settingsOpen && root.status !== "ACTIVE"
+        Layout.preferredHeight: 16 * root.uiScale
+        Layout.preferredWidth: badgeText.implicitWidth + 12 * root.uiScale
+        radius: height / 2
+        color: Qt.rgba(root.badgeColor.r, root.badgeColor.g, root.badgeColor.b, 0.16)
+        Behavior on color { ColorAnimation { duration: root.animationsEnabled ? 250 : 0 } }
+
+        Text {
+          id: badgeText
+          anchors.centerIn: parent
+          text: root.statusLabel()
+          textFormat: Text.PlainText
+          color: root.badgeColor
+          font.family: "sans-serif"
+          font.pixelSize: 8 * root.uiScale
+          font.weight: Font.DemiBold
+        }
+      }
+
       Text {
         visible: root.previewMode
         text: "PREVIEW"
@@ -247,8 +274,22 @@ Item {
         required property var modelData
         required property int index
         readonly property var used: root.usedPercent(modelData)
+        readonly property var elapsed: Usage.elapsedFraction(modelData, root.nowMs)
+        readonly property var pace: Usage.pace(modelData, root.nowMs)
+        property real reveal: 0
         width: content.width
         spacing: 0
+        opacity: reveal
+        transform: Translate { y: (1 - limitRow.reveal) * 8 * root.uiScale }
+
+        // Staggered entrance when the card (re)populates.
+        Component.onCompleted: reveal = 1
+        Behavior on reveal {
+          SequentialAnimation {
+            PauseAnimation { duration: root.animationsEnabled ? limitRow.index * 60 : 0 }
+            NumberAnimation { duration: root.animationsEnabled ? 320 : 0; easing.type: Easing.OutCubic }
+          }
+        }
 
         RowLayout {
           width: parent.width
@@ -289,9 +330,23 @@ Item {
             radius: height / 2
             color: root.usageColor(limitRow.used)
 
+            Behavior on color { ColorAnimation { duration: root.animationsEnabled ? 400 : 0 } }
             Behavior on width {
-              NumberAnimation { duration: root.animationsEnabled ? 900 : 0; easing.type: Easing.OutCubic }
+              enabled: root.animationsEnabled
+              SpringAnimation { spring: 2.4; damping: 0.3; epsilon: 0.1 }
             }
+          }
+
+          // Where an even burn rate would be right now.
+          Rectangle {
+            visible: limitRow.elapsed !== null
+            x: limitRow.elapsed === null ? 0 : Math.round(parent.width * limitRow.elapsed) - width / 2
+            y: -2 * root.uiScale
+            width: 2 * root.uiScale
+            height: parent.height + 4 * root.uiScale
+            radius: width / 2
+            color: "#ffffff"
+            opacity: 0.75
           }
         }
 
@@ -303,6 +358,18 @@ Item {
           color: "#ffffff"
           font.family: "sans-serif"
           font.pixelSize: 10 * root.uiScale
+        }
+
+        Text {
+          visible: limitRow.pace !== null
+          width: parent.width
+          topPadding: 4 * root.uiScale
+          text: limitRow.pace ? limitRow.pace.text : ""
+          textFormat: Text.PlainText
+          wrapMode: Text.Wrap
+          color: limitRow.pace ? root.toneColor(limitRow.pace.tone) : "#808080"
+          font.family: "sans-serif"
+          font.pixelSize: 9 * root.uiScale
         }
 
         Item {

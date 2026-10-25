@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../ui/Usage.js" as Usage
 
 QtObject {
   id: root
@@ -29,6 +30,7 @@ QtObject {
       "showPercentage": true,
       "showResetTimer": true,
       "animations": true,
+      "accentColor": "auto",
       "enabledProviders": { "claude": true, "codex": true }
     }
   }
@@ -67,6 +69,7 @@ QtObject {
       "showPercentage": raw.showPercentage === undefined ? base.showPercentage : raw.showPercentage === true,
       "showResetTimer": raw.showResetTimer === undefined ? base.showResetTimer : raw.showResetTimer === true,
       "animations": raw.animations === undefined ? base.animations : raw.animations === true,
+      "accentColor": Usage.validAccent(raw.accentColor),
       "enabledProviders": {
         "claude": providers.claude === false
           ? false

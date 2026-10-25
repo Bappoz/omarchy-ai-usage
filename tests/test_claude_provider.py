@@ -7,7 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
@@ -25,7 +25,7 @@ from helpers.claude_provider import (
 
 ROOT = Path(__file__).resolve().parents[1]
 FAKE = ROOT / "tests" / "fakes" / "fake_claude_collector.py"
-NOW = datetime(2030, 1, 1, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2030, 1, 1, 12, 0, tzinfo=UTC)
 
 
 def collect(scenario: str, timeout: float = 1.0) -> dict:

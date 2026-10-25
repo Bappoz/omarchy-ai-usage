@@ -10,7 +10,7 @@ import os
 import re
 import sys
 from collections.abc import Mapping, Sequence
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -88,12 +88,12 @@ def parse_time(value: object) -> str | None:
     if not isinstance(value, str):
         raise ProviderError("ERROR", "The Omarchy agent usage record has an invalid timestamp.")
     try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value)
     except ValueError as exc:
         raise ProviderError("ERROR", "The Omarchy agent usage record has an invalid timestamp.") from exc
     if parsed.tzinfo is None:
         raise ProviderError("ERROR", "The Omarchy agent usage record has an invalid timestamp.")
-    return parsed.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    return parsed.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 
 def percent(value: object) -> float | int:

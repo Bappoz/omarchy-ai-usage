@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.11.0
+
+- Fix provider rings appearing before the edge handle finished unfolding: they now fade in only once the silhouette is fully open, and each ring sweeps in from empty on every open.
+- Add an activity panel that opens beside a provider card: current model (with a live indicator), a 24-hour token sparkline with hover readout, 24h/7d totals, and per-model share. Data comes from aggregates of local Claude Code and Codex session logs (see `SECURITY.md`); toggle with `showInsights`.
+- Clicking a provider logo (rail or card header) opens the app: Claude Desktop or ChatGPT, falling back to the web app. Clicking no longer triggers a refresh; opening the card already does.
+- Give the opt-in preview synthetic activity data.
+- Rewrite the README with a feature overview, gallery (screenshots and an animation), data-source table, and corrected privacy notes; refresh `preview.png`.
+
 ## 0.10.0
 
 - Add `accentColor` (`auto` or any `#RRGGBB`) to recolor rings and bars, with an in-card preset selector.

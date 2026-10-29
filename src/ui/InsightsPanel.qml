@@ -14,6 +14,7 @@ Item {
   property real uiScale: 1
   property bool animationsEnabled: true
   property string accentColor: "auto"
+  property var providerColors: ({})
   property bool shown: false
   property real nowMs: Date.now()
   signal panelHovered(bool hovered)
@@ -24,7 +25,7 @@ Item {
   readonly property real padding: 32 * designScale
   readonly property real sectionGap: 17 * designScale
   readonly property real chartHeight: 46 * uiScale
-  readonly property color accent: Usage.chartColor(providerId, accentColor)
+  readonly property color accent: Usage.chartColor(providerId, accentColor, providerColors)
 
   readonly property var totals: insights && insights.totals ? insights.totals : ({})
   readonly property bool hasData: insights !== null && insights !== undefined
@@ -63,7 +64,10 @@ Item {
   function message() {
     if (root.failed) return "Activity could not be read."
     if (!root.insights) return "Reading activity…"
-    if (root.insights.available !== true) return "No local " + root.providerName + " session logs found."
+    if (root.insights.available !== true) {
+      if (typeof root.insights.message === "string" && root.insights.message.length) return root.insights.message
+      return "No local " + root.providerName + " session logs found."
+    }
     return "No activity in the last 7 days."
   }
 

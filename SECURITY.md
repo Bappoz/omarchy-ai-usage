@@ -12,7 +12,7 @@ When this project is published, use the repository's private security-advisory f
 
 Omarchy shell plugins are not sandboxed. QML and any child process run with the desktop user's permissions. This project therefore follows a narrow data-access model:
 
-- delegate collection and authentication entirely to the built-in `omarchy.agents` widget;
+- delegate Claude/Codex collection and authentication to `omarchy.agents`; Antigravity/Cursor quota collection uses Orca's local CLI and existing sign-in;
 - never read, copy, persist, or display credential files or bearer tokens;
 - accept only normalized provider data at the UI boundary;
 - never read or log raw provider responses;
@@ -21,16 +21,18 @@ Omarchy shell plugins are not sandboxed. QML and any child process run with the 
 - use the Python standard library to validate bounded, local records;
 - keep providers isolated so one failure cannot terminate the other providers or UI.
 
-The runtime does not execute `claude`, `codex`, or `omarchy-agent-usage-update`. It reads only the schema-version-1 records written atomically by `omarchy.agents`:
+For Claude and Codex, the runtime reads only the schema-version-1 records written atomically by `omarchy.agents`:
 
 ```text
 $XDG_STATE_HOME/omarchy/agents/usage/claude.json
 $XDG_STATE_HOME/omarchy/agents/usage/codex.json
 ```
 
+For Antigravity and Cursor, the helper runs Orca's app-scoped `account list --json` command. It does not pass credentials or prompts, stores only a short-lived sanitized quota snapshot in the user's cache, and does not print the raw CLI response. Gemini is not displayed as a separate provider.
+
 **Insights panel exception.** The activity panel beside the card (opt out with `showInsights: false`) is the one place that reads beyond the `omarchy.agents` records. While it is visible, `helpers/insights_provider.py` streams, read-only, the local session logs `~/.claude/projects/**/*.jsonl` and `~/.codex/sessions/**/*.jsonl` (honoring `CLAUDE_CONFIG_DIR` and `CODEX_HOME`). These logs contain conversations, so the helper keeps only a timestamp, a model name, an effort label, and token counts per request, and prints aggregates (24 hourly totals, per-model totals). Prompts, tool output, file paths, and session identifiers never leave the helper, and a test asserts that conversation text does not appear in its output. It considers only regular non-symlink files modified in the last seven days (at most 500 files, 256 MiB each) and runs single-flight with a 15-second cooldown.
 
-Clicking a provider logo launches the app through the fixed commands `gtk-launch <desktop-id>` (`com.anthropic.Claude`, `chatgpt`) or, if the entry is missing, `omarchy-launch-webapp <url>`. Neither command receives user-controlled arguments.
+Clicking a provider logo launches the matching desktop app when available or opens the provider web app. Neither command receives user-controlled arguments.
 
 When a live card is visible, the plugin may invoke the fixed command
 `omarchy-shell omarchy.agents refresh`. This is an IPC request to the built-in

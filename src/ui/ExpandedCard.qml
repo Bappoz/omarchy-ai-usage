@@ -17,6 +17,7 @@ Item {
   property bool showResetTimer: true
   property bool settingsOpen: false
   property string accentColor: "auto"
+  property var providerColors: ({})
   property bool canOpenApp: false
   property real nowMs: Date.now()
   property var preferences: ({})
@@ -72,7 +73,10 @@ Item {
 
   function usedPercent(window) { return Usage.usedPercent(window) }
 
-  function usageColor(used) { return Usage.usageColor(used, root.accentColor) }
+  function usageColor(used) {
+    var colors = root.providerColors || ({})
+    return Usage.usageColor(used, root.accentColor, colors[root.providerId])
+  }
 
   function toneColor(tone) {
     return tone === "over" ? "#ff3f00" : (tone === "warn" ? "#f2ff00" : "#808080")

@@ -3,7 +3,7 @@
 # Omarchy AI Usage
 
 **A native, edge-attached AI usage surface for [Omarchy](https://omarchy.org).**<br>
-Watch your Claude Code and Codex limits, see where your tokens go, and jump into the app, all from a small notch on the edge of your screen.
+Watch Claude Code, Codex, Antigravity, and Cursor quota windows from a small notch on the edge of your screen.
 
 [![CI](https://github.com/Bappoz/omarchy-ai-usage/actions/workflows/ci.yml/badge.svg)](https://github.com/Bappoz/omarchy-ai-usage/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -29,7 +29,7 @@ Watch your Claude Code and Codex limits, see where your tokens go, and jump into
 
 **Activity panel**
 - Opens beside the provider card with the current model and effort, a live indicator while it is in use, a 24-hour token sparkline with hover readout, 24h and 7-day totals, and a per-model breakdown.
-- Built from aggregates of your local Claude Code and Codex session logs. It can be turned off (see [Privacy](#privacy-and-security)).
+- Built from local Claude Code and Codex session logs. Other providers show their quota windows but do not claim token totals without a supported local source. It can be turned off (see [Privacy](#privacy-and-security)).
 
 **Make it yours**
 - Any accent color (`#RRGGBB`), or the built-in provider tints and usage scale.
@@ -41,7 +41,7 @@ Watch your Claude Code and Codex limits, see where your tokens go, and jump into
 - One switch (or `OMARCHY_REDUCED_MOTION=1`) turns all of it off.
 
 **One click to the app**
-- Click a provider logo, on the rail or in the card header, to open Claude Desktop or ChatGPT, with the web app as a fallback.
+- Click a provider logo, on the rail or in the card header, to open its app or web app.
 
 ## Gallery
 
@@ -101,7 +101,7 @@ omarchy plugin enable ai-usage.notch
 
 ## Configure
 
-Open a provider card and select the sliders icon. Each row cycles through its supported values, changes apply live, and they are saved through Omarchy's scoped plugin API. Claude and Codex are enabled automatically; at least one provider stays enabled.
+Open a provider card and select the sliders icon. Each row cycles through its supported values, changes apply live, and they are saved through Omarchy's scoped plugin API. All four providers are enabled automatically; at least one provider stays enabled.
 
 | Setting | Choices | Default | What it changes |
 | --- | --- | --- | --- |
@@ -112,9 +112,10 @@ Open a provider card and select the sliders icon. Each row cycles through its su
 | Open behavior | Hover, click | Hover | How the rail and card open |
 | Auto-hide | On, off | On | Whether an idle rail collapses to the edge pill |
 | Refresh interval | 5, 15, 30, 60 minutes | 15 minutes | Hidden fallback reread; a visible card requests fresh data every 30 seconds |
-| Claude / Codex | On, off | On | Which live providers appear |
-| Provider label / percentage / reset time | On, off | Label off; others on | Compact-surface density |
-| Accent color | Auto, seven presets, any hex via `shell.json` | Auto | Ring, bar, and chart color |
+| Claude / Codex / Antigravity / Cursor | On, off | On | Which live providers appear |
+| Provider label / reset time | On, off | On | Compact-surface density |
+| Provider colors | Auto or preset per provider | Brand colors | Ring, quota bar, and activity chart colors |
+| Accent color | Auto, seven presets, any hex via `shell.json` | Auto | Global fallback color; provider colors override it |
 | Insights panel | On, off | On | The activity panel beside the card |
 | Motion | On, off | On | Surface animation; off for a static UI |
 
@@ -131,12 +132,12 @@ For an exact connector or a continuous position, edit the plugin entry in `~/.co
   "expandBehavior": "click",
   "pollingInterval": 300,
   "showProviderLabel": true,
-  "showPercentage": true,
   "showResetTimer": true,
   "animations": true,
   "accentColor": "#38bdf8",
   "showInsights": true,
-  "enabledProviders": { "claude": true, "codex": false }
+  "enabledProviders": { "claude": true, "codex": true, "antigravity": true, "cursor": true },
+  "providerColors": { "claude": "#d97757", "codex": "#74aa9c", "antigravity": "#3186ff", "cursor": "#edecec" }
 }
 ```
 
@@ -148,10 +149,11 @@ For an exact connector or a continuous position, edit the plugin entry in `~/.co
 | --- | --- | --- |
 | `omarchy.agents` records in `~/.local/state/omarchy/agents/usage/` | Quota windows, percentages, reset times | Read-only watch; the built-in widget is the single writer |
 | `omarchy-shell omarchy.agents refresh` | Fresh data when a card opens and every 30 seconds while visible | Fixed IPC request, single-flight, 15-second cooldown |
+| Orca `account list --json` | Antigravity and Cursor quota windows | Local CLI output is normalized in memory; only quota percentages, reset times and plan labels reach the UI |
 | Local session logs (`~/.claude/projects`, `~/.codex/sessions`) | Activity panel | Read-only, only while the panel is visible, aggregated in a helper; can be turned off |
 | `gtk-launch` / `omarchy-launch-webapp` | Opening the app on logo click | Fixed commands, no user-controlled arguments |
 
-Authentication stays with the provider clients and quota collection stays with Omarchy, so every surface, including compatible consumers such as OmaPkDex, shows the same values. See [Architecture](docs/architecture.md) and [Provider feasibility](docs/provider-feasibility.md) for why Copilot, Gemini, and Perplexity are not exposed as live data.
+Authentication stays with provider clients. Claude and Codex quotas come from Omarchy; Antigravity and Cursor quotas come from Orca. Gemini is intentionally not displayed as a separate provider. See [Provider feasibility](docs/provider-feasibility.md) for details.
 
 ## Troubleshooting
 
@@ -163,10 +165,10 @@ Authentication stays with the provider clients and quota collection stays with O
 5. Restart the shell after updating from a release older than 0.8.1.
 
 **The activity panel says there are no logs or no activity**
-It reads the session logs written by Claude Code and Codex. If you relocated them, `CLAUDE_CONFIG_DIR` and `CODEX_HOME` are honored. A provider with no activity in the last seven days shows an empty state instead of a chart.
+It reads the session logs written by Claude Code and Codex. If you relocated them, `CLAUDE_CONFIG_DIR` and `CODEX_HOME` are honored. Antigravity and Cursor do not currently expose supported local per-request token logs to this panel, so it shows quota without fabricated token totals.
 
 **Clicking a logo does nothing**
-The app is launched through its desktop entry (`com.anthropic.Claude` for Claude, `chatgpt` for Codex) and falls back to the provider's web app via `omarchy-launch-webapp`. Check that one of them exists on your system.
+The plugin opens the provider's desktop app when available and otherwise opens its web app.
 
 ## Update
 
@@ -197,6 +199,8 @@ Probe the helpers directly:
 
 ```sh
 python helpers/omarchy_agent_provider.py --provider claude   # normalized quota snapshot
+python helpers/orca_usage_provider.py --provider antigravity # Orca quota snapshot
+python helpers/orca_usage_provider.py --provider cursor      # Orca quota snapshot
 python helpers/insights_provider.py --provider claude        # activity aggregates
 ```
 
@@ -221,7 +225,7 @@ Marketplace maintainers validate the current public commit before approval; see 
 
 Omarchy plugins are not sandboxed, so this one keeps a narrow, documented data boundary:
 
-- It never reads credential files, tokens, browser storage, or raw provider responses, and it never starts Claude Code, Codex, or the usage collector. It launches an app only when you click its logo.
+- It never reads credential files, tokens, browser storage, or stores raw provider responses. It never starts Claude Code, Codex, or the Omarchy usage collector. It queries Orca's local quota CLI for Antigravity and Cursor and retains only sanitized quota fields. It launches an app only when you click its logo.
 - Quota snapshots contain usage windows, percentages, reset times, and an optional plan label, never tokens or account identifiers.
 - The activity panel is the one exception to "records only". Session logs contain conversations, so the helper keeps only a timestamp, model name, effort label, and token counts per request, and emits aggregates. Prompts, tool output, file paths, and session ids never leave it, and a test asserts that conversation text does not appear in its output. Disable the panel with `showInsights: false`.
 - The repository contains no real provider output or account data.

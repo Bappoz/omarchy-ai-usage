@@ -56,8 +56,11 @@ class PreferenceTests(unittest.TestCase):
             "Open",
             "Refresh",
             "Provider label",
-            "Percentage",
             "Reset time",
+            "Claude color",
+            "Codex color",
+            "Antigravity color",
+            "Cursor color",
             "Motion",
         ):
             with self.subTest(label=label):
@@ -80,7 +83,7 @@ class PreferenceTests(unittest.TestCase):
         ring = (ROOT / "src" / "ui" / "UsageRing.qml").read_text()
         self.assertIn('preferences.size === "small" ? 0.85', self.window)
         self.assertIn('preferences.size === "large" ? 1.2', self.window)
-        self.assertIn("font.pixelSize: 14 * root.uiScale", compact)
+        self.assertIn("font.pixelSize: 9 * root.uiScale", compact)
         self.assertIn("font.pixelSize: 14 * root.uiScale", expanded)
         self.assertIn("(44 / 117) * uiScale", ring)
 

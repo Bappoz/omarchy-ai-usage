@@ -11,8 +11,8 @@ Item {
   property real uiScale: 1
   property bool animationsEnabled: true
   property bool showProviderLabel: false
-  property bool showPercentage: true
   property string accentColor: "auto"
+  property var providerColors: ({})
 
   signal surfaceHovered(bool hovered)
   signal providerHovered(int index, bool hovered)
@@ -158,6 +158,7 @@ Item {
           pressed: cellMouse.pressed
           uiScale: root.uiScale
           accentColor: root.accentColor
+          providerColor: String((root.providerColors || ({}))[String(cell.modelData.id || "")] || "auto")
           accessibleName: String(cell.modelData.displayName || "Provider") + " usage"
         }
 
@@ -167,22 +168,13 @@ Item {
           height: root.percentLineHeight
           horizontalAlignment: Text.AlignHCenter
           verticalAlignment: Text.AlignVCenter
-          visible: root.showProviderLabel || root.showPercentage
-          text: {
-            var label = root.showProviderLabel ? String(cell.modelData.displayName || "Provider") : ""
-            var percent = ""
-            if (root.showPercentage) {
-              percent = typeof cell.modelData.usedPercent === "number" && isFinite(cell.modelData.usedPercent)
-                ? Math.round(Math.max(0, Math.min(100, cell.modelData.usedPercent))) + "%"
-                : "—"
-            }
-            return label && percent ? label + " " + percent : (label || percent)
-          }
+          visible: root.showProviderLabel
+          text: String(cell.modelData.displayName || "Provider")
           textFormat: Text.PlainText
           color: "#ffffff"
           opacity: cell.modelData.stale ? 0.45 : 1
           font.family: "sans-serif"
-          font.pixelSize: 14 * root.uiScale
+          font.pixelSize: 9 * root.uiScale
           font.weight: Font.DemiBold
           font.letterSpacing: -0.15
         }

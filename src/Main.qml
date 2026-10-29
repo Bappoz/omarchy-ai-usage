@@ -76,7 +76,7 @@ Item {
   ProviderStore {
     id: providerStore
     pollingIntervalSeconds: root.preferenceValues.pollingInterval || 900
-    enabledProviders: root.preferenceValues.enabledProviders || ({ "claude": true, "codex": true })
+    enabledProviders: root.preferenceValues.enabledProviders || ({ "claude": true, "codex": true, "antigravity": true, "cursor": true })
   }
 
   InsightsStore {

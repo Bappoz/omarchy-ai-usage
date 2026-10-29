@@ -8,7 +8,9 @@ QtObject {
   // entries are the installed apps; the web app is the fallback when absent.
   readonly property var apps: ({
     "claude": { "desktop": "com.anthropic.Claude", "url": "https://claude.ai" },
-    "codex": { "desktop": "chatgpt", "url": "https://chatgpt.com/codex" }
+    "codex": { "desktop": "chatgpt", "url": "https://chatgpt.com/codex" },
+    "antigravity": { "url": "https://antigravity.google" },
+    "cursor": { "url": "https://cursor.com" }
   })
   property string pendingUrl: ""
 
@@ -18,6 +20,11 @@ QtObject {
     var app = root.apps[providerId]
     if (!app || primary.running || fallback.running) return false
     root.pendingUrl = app.url
+    if (!app.desktop) {
+      fallback.command = ["omarchy-launch-webapp", root.pendingUrl]
+      fallback.running = true
+      return true
+    }
     primary.command = ["gtk-launch", app.desktop]
     primary.running = true
     return true

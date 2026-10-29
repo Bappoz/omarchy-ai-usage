@@ -15,13 +15,13 @@ The in-card settings control covers the common choices. The normalized configura
   "autoHide": true,
   "expandBehavior": "hover",
   "pollingInterval": 900,
-  "showProviderLabel": false,
-  "showPercentage": true,
+  "showProviderLabel": true,
   "showResetTimer": true,
   "animations": true,
   "accentColor": "auto",
   "showInsights": true,
-  "enabledProviders": { "claude": true, "codex": true }
+  "enabledProviders": { "claude": true, "codex": true, "antigravity": true, "cursor": true },
+  "providerColors": { "claude": "#d97757", "codex": "#74aa9c", "antigravity": "#3186ff", "cursor": "#edecec" }
 }
 ```
 
@@ -34,10 +34,11 @@ The in-card settings control covers the common choices. The normalized configura
 - `autoHide`: when true, the full rail collapses back to its edge pill.
 - `expandBehavior`: `hover` or `click`. With `autoHide: false`, the provider rail remains open.
 - `pollingInterval`: seconds, clamped to 60–3600; the UI offers 5, 15, 30, and 60 minutes. This is the hidden fallback reread. A visible card asks `omarchy.agents` for fresh records when opened and every 30 seconds, with a 15-second request cooldown.
-- `showProviderLabel`, `showPercentage`, `showResetTimer`, `animations`: boolean presentation choices.
-- `accentColor`: `auto` (green/yellow/orange by usage) or any `#RRGGBB` hex, which replaces that scale for rings and bars. The card cycles through presets; any hex can be set directly in `shell.json`. Invalid values fall back to `auto`.
+- `showProviderLabel`, `showResetTimer`, `animations`: boolean presentation choices. Compact provider labels use a smaller type size; usage is communicated by the ring fill.
+- `accentColor`: `auto` (green/yellow/orange by usage) or any `#RRGGBB` hex, used when a provider has no specific color. Provider colors override it. The card cycles through presets; any hex can be set directly in `shell.json`. Invalid values fall back to `auto`.
 - `showInsights`: show the activity panel beside an open provider card. It reads aggregates of local session logs only while visible; see `SECURITY.md`.
-- `enabledProviders.claude` and `enabledProviders.codex`: provider switches also exposed in the card. The UI keeps at least one enabled.
+- `enabledProviders.claude`, `codex`, `antigravity`, and `cursor`: provider switches also exposed in the card. The UI keeps at least one enabled.
+- `providerColors`: optional `#RRGGBB` colors for each provider. These color the ring, quota bars, and activity accent. Use `"auto"` to inherit the global accent. The settings card cycles through presets; any hex can be entered in `shell.json`.
 
 Malformed, missing, and out-of-range values fall back to safe defaults. Unknown fields are discarded when the plugin next writes its normalized preferences. `settingsVersion` reserves an explicit migration point for future releases.
 

@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Any
 
 CONTRACT_VERSION = 1
-PROVIDERS = ("claude", "codex")
+PROVIDERS = ("claude", "codex", "antigravity", "cursor")
 HOURS = 24
 MODEL_WINDOW_DAYS = 7
 MAX_FILES = 500
@@ -251,6 +251,19 @@ def build_insights(provider_id: str, events: list[Event], now: datetime, *, avai
 
 def collect(provider_id: str, now: datetime | None = None) -> dict[str, Any]:
     now = now or utc_now()
+    if provider_id not in COLLECTORS:
+        labels = {"antigravity": "Antigravity", "cursor": "Cursor"}
+        return {
+            "schemaVersion": CONTRACT_VERSION,
+            "providerId": provider_id,
+            "available": False,
+            "generatedAt": isoformat_utc(now),
+            "currentModel": None,
+            "hourly": [{"start": isoformat_utc(now.replace(minute=0, second=0, microsecond=0) - timedelta(hours=23-index)), "tokens": 0} for index in range(HOURS)],
+            "totals": {"last24hTokens": 0, "last24hRequests": 0, "last7dTokens": 0, "last7dRequests": 0},
+            "models": [],
+            "message": f"{labels[provider_id]} quota is shown above; local token totals are not available.",
+        }
     root_for, collector = COLLECTORS[provider_id]
     root = root_for()
     since = now - timedelta(days=MODEL_WINDOW_DAYS)

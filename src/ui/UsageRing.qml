@@ -15,6 +15,7 @@ Item {
   property bool pressed: false
   property real uiScale: 1
   property string accentColor: "auto"
+  property string providerColor: "auto"
   property string accessibleName: "Usage"
 
   readonly property bool hasReading: typeof usedPercent === "number" && isFinite(usedPercent)
@@ -27,7 +28,7 @@ Item {
   readonly property real progressStroke: 8 * designScale
   readonly property real ringRadius: Math.max(1, (Math.min(width, height) - trackStroke) / 2)
   readonly property color trackColor: "#303030"
-  property color progressColor: Usage.usageColor(safeUsed, accentColor)
+  property color progressColor: Usage.usageColor(safeUsed, accentColor, providerColor)
 
   Accessible.role: Accessible.ProgressBar
   Accessible.name: root.accessibleName

@@ -7,15 +7,19 @@ QtObject {
 
   readonly property var docs: root.previewMode
     ? root.previewDocs()
-    : ({ "claude": claudeRunner.doc, "codex": codexRunner.doc })
+    : ({ "claude": claudeRunner.doc, "codex": codexRunner.doc,
+         "antigravity": antigravityRunner.doc, "cursor": cursorRunner.doc })
   readonly property var failures: root.previewMode
     ? ({})
-    : ({ "claude": claudeRunner.failed, "codex": codexRunner.failed })
+    : ({ "claude": claudeRunner.failed, "codex": codexRunner.failed,
+         "antigravity": antigravityRunner.failed, "cursor": cursorRunner.failed })
 
   function refresh(providerId) {
     if (root.previewMode) return
     if (providerId === "claude") claudeRunner.refresh()
     else if (providerId === "codex") codexRunner.refresh()
+    else if (providerId === "antigravity") antigravityRunner.refresh()
+    else if (providerId === "cursor") cursorRunner.refresh()
   }
 
   // Synthetic shapes for the opt-in preview only; never used as a live fallback.
@@ -65,4 +69,6 @@ QtObject {
 
   property InsightsRunner claudeRunner: InsightsRunner { providerId: "claude" }
   property InsightsRunner codexRunner: InsightsRunner { providerId: "codex" }
+  property InsightsRunner antigravityRunner: InsightsRunner { providerId: "antigravity" }
+  property InsightsRunner cursorRunner: InsightsRunner { providerId: "cursor" }
 }

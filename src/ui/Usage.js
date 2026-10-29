@@ -8,10 +8,12 @@ function validAccent(value) {
   return /^#[0-9a-f]{6}$/.test(text) ? text : AUTO
 }
 
-// "auto" keeps the CodeNotch green/yellow/orange scale; any hex replaces it.
-function usageColor(used, accent) {
+// A provider hex takes precedence, then the global accent, then the usage scale.
+function usageColor(used, accent, providerAccentValue) {
   if (used === null || used === undefined) return "#808080"
+  var providerAccent = validAccent(providerAccentValue)
   var custom = validAccent(accent)
+  if (providerAccent !== AUTO) return providerAccent
   if (custom !== AUTO) return custom
   return used < 50 ? "#00ff88" : (used < 70 ? "#f2ff00" : "#ff3f00")
 }
@@ -67,11 +69,19 @@ function pace(window, nowMs) {
   return { tone: used / 100 > elapsed + 0.1 ? "warn" : "ok", text: "On pace to last until reset" }
 }
 
-var PROVIDER_TINTS = { claude: "#d97757", codex: "#74aa9c" }
+var PROVIDER_TINTS = {
+  claude: "#d97757",
+  codex: "#74aa9c",
+  antigravity: "#8ab4f8",
+  cursor: "#edecec"
+}
 
-// Charts and model shares take the custom accent when set, otherwise the
-// provider's own tint (the usage-threshold scale only makes sense for quotas).
-function chartColor(providerId, accent) {
+// Per-provider color takes precedence over the global accent and provider tint.
+function chartColor(providerId, accent, providerColors) {
+  var providerAccent = providerColors && typeof providerColors === "object"
+    ? validAccent(providerColors[providerId])
+    : AUTO
+  if (providerAccent !== AUTO) return providerAccent
   var custom = validAccent(accent)
   if (custom !== AUTO) return custom
   return PROVIDER_TINTS[providerId] || "#00ff88"

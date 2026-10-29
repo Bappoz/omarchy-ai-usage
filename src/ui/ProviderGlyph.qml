@@ -6,11 +6,13 @@ Item {
 
   property string providerId: "codex"
   property real opticalScale: providerId === "codex" ? 0.94
-    : (providerId === "claude" ? 0.97 : 1.0)
+    : (providerId === "claude" || providerId === "antigravity" ? 0.97 : 1.0)
 
   function glyphSource() {
     if (root.providerId === "claude") return Qt.resolvedUrl("../assets/glyphs/claude.svg")
     if (root.providerId === "perplexity") return Qt.resolvedUrl("../assets/glyphs/perplexity.svg")
+    if (root.providerId === "antigravity") return Qt.resolvedUrl("../assets/glyphs/antigravity.png")
+    if (root.providerId === "cursor") return Qt.resolvedUrl("../assets/glyphs/cursor.svg")
     return Qt.resolvedUrl("../assets/glyphs/codex.svg")
   }
 

@@ -1,16 +1,19 @@
 # Provider feasibility
 
-Last reviewed: 2026-09-22.
+Last reviewed: 2026-10-29.
 
 Live providers must expose a stable, authenticated and machine-readable quota
 window with both consumption and a ceiling/reset. Omarchy AI Usage does not
 read credential files, browser storage or private web endpoints, and it does
-not turn token counts into invented quota percentages. Collection remains
-owned by `omarchy.agents`; this plugin consumes its schema-version-1 records.
+not turn token counts into invented quota percentages. Claude and Codex come
+from `omarchy.agents`; Antigravity and Cursor quota windows are read from Orca's
+local `account list --json` interface. Gemini is not shown as a separate
+provider card.
 
 The installed Omarchy release currently ships official usage collectors for
-Claude, Codex and Fireworks. This plugin displays Claude and Codex. The
-following candidates were investigated and deliberately remain unavailable.
+Claude, Codex and Fireworks. The plugin also uses Orca's local quota interface
+for Antigravity and Cursor.
+The following candidates remain unavailable.
 
 ## GitHub Copilot
 
@@ -28,22 +31,30 @@ Decision: do not add a partial percentage or depend on undocumented Copilot
 endpoints. Revisit when GitHub or `omarchy.agents` exposes entitlement plus
 usage and reset semantics.
 
-## Gemini CLI
+## Gemini CLI and Antigravity
 
-Gemini CLI documents `/stats model` as an interactive view containing session
-token counts and quota information. Its documented headless JSON output reports
-statistics for the new command being executed; it is not a read-only account
-quota query. Starting a prompt merely to obtain stats would itself consume
-quota. Google also explicitly prohibits third-party software from reusing the
-Gemini CLI OAuth backend. `omarchy.agents` does not ship a Gemini collector.
+Google's consumer Gemini CLI sign-in has been retired for individual accounts;
+the CLI now directs users to Antigravity. The old browser authorization page
+may list Gemini CLI as an authorized product, but that does not restore access
+through the retired client. This plugin does not reuse Gemini CLI credentials.
+The plugin intentionally does not show a separate Gemini card. The Antigravity
+card remains the only Google quota surface in this plugin.
 
-Sources: [Gemini CLI commands](https://github.com/google-gemini/gemini-cli/blob/main/docs/reference/commands.md),
-[headless mode](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/headless.md), and
-[terms and privacy](https://github.com/google-gemini/gemini-cli/blob/main/docs/resources/tos-privacy.md).
+Source: [Google's transition announcement](https://developers.googleblog.com/an-important-update-transitioning-gemini-cli-to-antigravity-cli/).
 
-Decision: do not automate the interactive terminal or access the private OAuth
-backend. Revisit when Gemini CLI publishes a non-consuming structured quota
-command or Omarchy adds a collector.
+Decision: do not show a separate Gemini provider. The Antigravity card uses
+the quota windows Orca reports for the Antigravity account. The legacy Gemini
+CLI may continue to offer API-key or Vertex AI modes, but those do not provide
+this subscription quota view.
+
+## Cursor
+
+Cursor quota windows are read from Orca's local account listing. The plugin
+does not read Cursor credentials or call undocumented Cursor endpoints.
+Per-request token totals are not shown because there is no supported local
+session-log source in this integration.
+
+Source: [Orca usage tracking](https://www.onorca.dev/docs/agents/usage-tracking).
 
 ## Perplexity
 

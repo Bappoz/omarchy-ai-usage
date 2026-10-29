@@ -320,8 +320,8 @@ PanelWindow {
     uiScale: root.sizeScale
     animationsEnabled: root.motionEnabled
     showProviderLabel: root.preferences.showProviderLabel === true
-    showPercentage: root.preferences.showPercentage !== false
     accentColor: String(root.preferences.accentColor || "auto")
+    providerColors: root.preferences.providerColors || ({})
 
     onSurfaceHovered: function(hovered) {
       root.hoveringSurface = hovered
@@ -374,6 +374,7 @@ PanelWindow {
     animationsEnabled: root.motionEnabled
     showResetTimer: root.preferences.showResetTimer !== false
     accentColor: String(root.preferences.accentColor || "auto")
+    providerColors: root.preferences.providerColors || ({})
     settingsOpen: root.settingsOpen
     preferences: root.preferences
     canOpenApp: root.activeProvider !== null && root.openableApps[String(root.activeProvider.id)] !== undefined
@@ -427,6 +428,7 @@ PanelWindow {
     uiScale: root.sizeScale
     animationsEnabled: root.motionEnabled
     accentColor: String(root.preferences.accentColor || "auto")
+    providerColors: root.preferences.providerColors || ({})
     onPanelHovered: function(hovered) {
       root.hoveringPanel = hovered
       if (hovered) hoverGrace.stop()

@@ -80,8 +80,9 @@ def _timestamp(value: object) -> str | None:
         except (OverflowError, OSError, ValueError):
             return None
     if isinstance(value, str) and value.strip():
+        normalized = value[:-1] + "+00:00" if value.endswith("Z") else value
         try:
-            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            parsed = datetime.fromisoformat(normalized)
         except ValueError:
             return None
         if parsed.tzinfo is None:
@@ -335,7 +336,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         snapshot = collect(args.provider)
-    except Exception:
+    # Keep unexpected runtime failures behind the provider-neutral JSON boundary.
+    except Exception:  # noqa: BLE001
         snapshot = _empty(args.provider, "UNAVAILABLE", f"Orca could not provide {PROVIDERS[args.provider]} quota data.")
     json.dump(snapshot, sys.stdout, separators=(",", ":"))
     sys.stdout.write("\n")

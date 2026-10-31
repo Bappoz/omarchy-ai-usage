@@ -21,6 +21,8 @@ from helpers.claude_provider import (
     collect_shared_claude,
     normalize_claude_payload,
     refresh_provider,
+    renew_claude_login,
+    with_login_renewal,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -100,6 +102,25 @@ class ClaudeProviderTests(unittest.TestCase):
         snapshot = normalize_claude_payload(collect("auth"), NOW)
         validate_snapshot(snapshot)
         self.assertEqual(snapshot["status"], "NEEDS_AUTH")
+
+    def test_expired_login_triggers_one_renewal_and_refetch(self) -> None:
+        calls = []
+        payloads = iter([{"usageStatusText": "Sign-in expired"}, {"limits": []}])
+        fetch = with_login_renewal(lambda: next(payloads), lambda: calls.append(1) or True)
+        self.assertEqual(fetch(), {"limits": []})
+        self.assertEqual(calls, [1])
+
+    def test_healthy_payload_never_renews(self) -> None:
+        fetch = with_login_renewal(lambda: {"limits": []}, lambda: self.fail("renewed"))
+        self.assertEqual(fetch(), {"limits": []})
+
+    def test_renewal_respects_cooldown(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch("helpers.claude_provider.subprocess.run") as run:
+            stamp = Path(tmp) / "claude-renew.stamp"
+            self.assertTrue(renew_claude_login(stamp, claude="/bin/claude"))
+            self.assertFalse(renew_claude_login(stamp, claude="/bin/claude"))
+            run.assert_called_once()
+            self.assertEqual(run.call_args.args[0], ["/bin/claude", "auth", "status"])
 
     def test_collector_stale_payload_remains_visible(self) -> None:
         snapshot = normalize_claude_payload(collect("stale"), NOW)

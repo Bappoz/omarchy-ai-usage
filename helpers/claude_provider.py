@@ -13,6 +13,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from collections.abc import Callable, Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -28,6 +29,8 @@ DEFAULT_COLLECTOR = "/usr/share/omarchy/bin/omarchy-agent-usage-claude"
 DEFAULT_UPDATER = "/usr/share/omarchy/bin/omarchy-agent-usage-update"
 IDENTIFIER_PART = re.compile(r"[^a-z0-9._-]+")
 AUTH_STATUSES = {"waiting for auth", "sign-in expired"}
+RENEW_COOLDOWN_SECONDS = 15 * 60
+RENEW_TIMEOUT_SECONDS = 20.0
 
 
 class ProviderError(Exception):
@@ -150,6 +153,61 @@ def collect_shared_claude(
     except OSError as exc:
         raise ProviderError("ERROR", "Claude usage could not be refreshed.") from exc
     return _parse_payload(raw)
+
+
+def renew_claude_login(
+    stamp_path: Path | None,
+    *,
+    claude: str | None = None,
+    now: float | None = None,
+    timeout_seconds: float = RENEW_TIMEOUT_SECONDS,
+) -> bool:
+    """Run the Claude CLI once so it refreshes its own expired access token.
+
+    The collector only reads ~/.claude/.credentials.json; only the CLI mints a
+    new token. The refresh token rotates, so this never touches it directly.
+    """
+    claude = claude or shutil.which("claude")
+    if not claude:
+        return False
+    current = time.time() if now is None else now
+    try:
+        if stamp_path is not None and current - stamp_path.stat().st_mtime < RENEW_COOLDOWN_SECONDS:
+            return False
+    except OSError:
+        pass
+    if stamp_path is not None:
+        try:
+            stamp_path.parent.mkdir(parents=True, exist_ok=True)
+            stamp_path.touch()
+        except OSError:
+            pass
+    try:
+        subprocess.run(
+            [claude, "auth", "status"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=timeout_seconds,
+            check=False,
+            shell=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return True
+
+
+def with_login_renewal(
+    fetch: Callable[[], Mapping[str, Any]],
+    renew: Callable[[], bool],
+) -> Callable[[], Mapping[str, Any]]:
+    def wrapped() -> Mapping[str, Any]:
+        payload = fetch()
+        if str(payload.get("usageStatusText") or "").strip().lower() in AUTH_STATUSES and renew():
+            return fetch()
+        return payload
+
+    return wrapped
 
 
 def _empty_snapshot(status: str, message: str) -> dict[str, Any]:
@@ -432,6 +490,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         fetch = lambda: collect_claude(build_collector_command(str(collector)), timeout_seconds=args.timeout)
     else:
         fetch = lambda: (_ for _ in ()).throw(ProviderError("UNAVAILABLE", "Claude usage support is not available in this Omarchy version."))
+    fetch = with_login_renewal(fetch, lambda: renew_claude_login(default_cache_path().with_name("claude-renew.stamp")))
     snapshot = refresh_provider(fetch, cache_path=cache_path, max_cache_age_seconds=args.max_cache_age)
     print(json.dumps(snapshot, ensure_ascii=False, separators=(",", ":")))
     return 0

@@ -1,4 +1,4 @@
-.PHONY: test lint validate check
+.PHONY: test lint validate check smoke
 
 test:
 	python -m unittest discover -s tests -v
@@ -11,3 +11,6 @@ lint:
 	find src -name '*.qml' -print0 | xargs -0 -n1 qmllint
 
 check: test lint validate
+
+smoke:
+	python tests/run_qml_smoke.py

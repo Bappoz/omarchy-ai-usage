@@ -128,23 +128,26 @@ class CompactUiTests(unittest.TestCase):
             asset = ROOT / "src" / "assets" / "glyphs" / f"{provider}.svg"
             with self.subTest(provider=provider):
                 self.assertTrue(asset.is_file())
-                self.assertIn(f'{provider}.svg', glyph)
+                self.assertIn(f'{provider if provider != "claude" else "claude-brand"}.svg', glyph)
                 self.assertIn('<path fill="#fff"', asset.read_text())
         self.assertNotIn("https://", glyph)
 
     def test_claude_glyph_uses_official_brand_orange(self) -> None:
         glyph = (ROOT / "src" / "ui" / "ProviderGlyph.qml").read_text()
-        self.assertIn('colorizationColor: "#D97757"', glyph)
-        self.assertIn('visible: root.providerId === "claude"', glyph)
+        asset = (ROOT / "src/assets/glyphs/claude-brand.svg").read_text()
+        self.assertIn('fill="#D97757"', asset)
+        self.assertIn('claude-brand.svg', glyph)
+        self.assertNotIn('MultiEffect', glyph)
 
     def test_reference_motion_vocabulary_is_present(self) -> None:
         compact = (ROOT / "src" / "ui" / "CompactNotch.qml").read_text()
         window = (ROOT / "src" / "ui" / "EdgeWindow.qml").read_text()
         ring = (ROOT / "src" / "ui" / "UsageRing.qml").read_text()
-        self.assertIn("root.animationsEnabled ? (root.unfolded ? 420 : 220) : 0", compact)
+        self.assertIn("Behavior on openProgress", compact)
+        self.assertIn("SpringAnimation", compact)
         self.assertIn("cell.index * 45", compact)
         self.assertIn("interval: 250", window)
-        self.assertIn("duration: root.motionEnabled ? 500 : 0", window)
+        self.assertIn("SpringAnimation", window)
         self.assertIn("enabled: root.animationsEnabled", ring)
         self.assertIn("SpringAnimation", ring)
 
@@ -254,11 +257,11 @@ class InsightsWiringTests(unittest.TestCase):
         self.assertIn("active: cell.reveal > 0.01", compact)
         self.assertIn("active ? safeUsed / 100 : 0", ring)
 
-    def test_clicking_a_logo_opens_the_app_instead_of_refreshing(self) -> None:
+    def test_ring_click_refreshes_and_header_logo_opens_the_app(self) -> None:
         window = self.read("ui", "EdgeWindow.qml")
         block = window.split("onProviderActivated: function(index) {")[1].split("\n    }")[0]
-        self.assertIn("root.appRequested(", block)
-        self.assertNotIn("refreshRequested", block)
+        self.assertIn("root.refreshRequested(", block)
+        self.assertIn("root.sessionFocusRequested(", block)
         self.assertIn("onAppRequested: function(providerId) { appLauncher.open(providerId) }", self.read("Main.qml"))
         self.assertIn("onClicked: root.appRequested()", self.read("ui", "ExpandedCard.qml"))
 

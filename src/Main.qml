@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Hyprland
 import "model"
 import "ui"
+import "model/Activity.js" as Activity
 
 Item {
   id: root
@@ -12,6 +13,32 @@ Item {
   property var shell: null
   property var manifest: null
   readonly property var preferenceValues: preferenceStore.values || ({})
+  property var quotaHistory: ({})
+  property var latestEvent: null
+
+  function sessionEvent(event) {
+    root.latestEvent = { session: event.session, reason: event.reason, at: Date.now() }
+    var p = root.preferenceValues
+    var sound = p.sessionSounds === false ? "" : (event.reason === "blocked" ? p.waitingSound : p.finishedSound)
+    desktopFeedback.send(event.session.providerId, event.reason, p.sessionNotifications === true, sound)
+    providerStore.refresh(event.session.providerId)
+  }
+
+  function checkQuotaAlerts() {
+    if (providerStore.previewMode) return
+    var history = ({})
+    var p = root.preferenceValues
+    providerStore.snapshots.forEach(function(snapshot) {
+      var id = snapshot.providerId
+      var next = Activity.quotaCrossings(root.quotaHistory[id], snapshot, Date.now())
+      history[id] = next.previous
+      if (p.quotaAlerts !== false && (!p.mutedAlerts || p.mutedAlerts[id] !== true)
+          && next.thresholds.length) {
+        desktopFeedback.send(id, String(next.thresholds[next.thresholds.length - 1]), true, "")
+      }
+    })
+    root.quotaHistory = history
+  }
 
   readonly property string edge: normalizeEdge(environmentOr(
     "OMARCHY_AI_USAGE_EDGE", root.preferenceValues.edge
@@ -77,7 +104,25 @@ Item {
     id: providerStore
     pollingIntervalSeconds: root.preferenceValues.pollingInterval || 900
     enabledProviders: root.preferenceValues.enabledProviders || ({ "claude": true, "codex": true, "antigravity": true, "cursor": true })
+    activeProviderIds: {
+      var result = []
+      sessionStore.sessions.forEach(function(s) {
+        if (s.state === "busy" && result.indexOf(s.providerId) < 0) result.push(s.providerId)
+      })
+      return result
+    }
+    onSnapshotsChanged: Qt.callLater(root.checkQuotaAlerts)
   }
+
+  SessionStore {
+    id: sessionStore
+    enabled: root.preferenceValues.showSessions !== false
+    previewMode: providerStore.previewMode
+    enabledProviders: providerStore.enabledProviders
+    onEventOccurred: function(event) { root.sessionEvent(event) }
+  }
+
+  DesktopFeedback { id: desktopFeedback }
 
   InsightsStore {
     id: insightsStore
@@ -109,6 +154,11 @@ Item {
       insights: insightsStore.docs
       insightFailures: insightsStore.failures
       openableApps: appLauncher.apps
+      sessions: sessionStore.sessions
+      sessionsFailed: sessionStore.failed
+      latestEvent: root.latestEvent
+      onSessionFocusRequested: function(session) { sessionStore.focus(session) }
+      onSoundPreviewRequested: function(sound) { desktopFeedback.send("claude", "preview", false, sound) }
       onInsightsRequested: function(providerId) { insightsStore.refresh(providerId) }
       onAppRequested: function(providerId) { appLauncher.open(providerId) }
       onRefreshRequested: function(providerId) { providerStore.refresh(providerId) }

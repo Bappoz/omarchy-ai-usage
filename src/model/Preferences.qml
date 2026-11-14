@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import "../ui/Usage.js" as Usage
+import "Activity.js" as Activity
 
 QtObject {
   id: root
@@ -26,14 +27,27 @@ QtObject {
       "autoHide": true,
       "expandBehavior": "hover",
       "pollingInterval": 900,
-      "showProviderLabel": true,
-      "showPercentage": false,
+      "showProviderLabel": false,
+      "showPercentage": true,
       "showResetTimer": true,
       "animations": true,
       "accentColor": "auto",
       "showInsights": true,
+      "showSessions": true,
+      "peekOnEvent": true,
+      "peekDuration": 5,
+      "sessionSounds": true,
+      "sessionNotifications": false,
+      "finishedSound": "complete",
+      "waitingSound": "bell",
+      "quotaAlerts": true,
+      "mutedAlerts": {},
+      "busyIndicator": "arc",
+      "resetTimeStyle": "remaining",
+      "providerOrder": ["claude", "codex", "antigravity", "cursor"],
+      "edgeOffsets": {},
       "enabledProviders": { "claude": true, "codex": true, "antigravity": true, "cursor": true },
-      "providerColors": { "claude": "#d97757", "codex": "#74aa9c", "antigravity": "#3186ff", "cursor": "#edecec" }
+      "providerColors": { "claude": "auto", "codex": "auto", "antigravity": "auto", "cursor": "auto" }
     }
   }
 
@@ -55,6 +69,8 @@ QtObject {
     var behaviors = ["hover", "click"]
     var providers = plainObject(raw.enabledProviders) ? raw.enabledProviders : ({})
     var providerColors = plainObject(raw.providerColors) ? raw.providerColors : ({})
+    var muted = plainObject(raw.mutedAlerts) ? raw.mutedAlerts : ({})
+    var offsets = plainObject(raw.edgeOffsets) ? raw.edgeOffsets : ({})
     var edge = String(raw.edge || "").toLowerCase()
     var size = String(raw.size || "").toLowerCase()
     var behavior = String(raw.expandBehavior || "").toLowerCase()
@@ -69,7 +85,7 @@ QtObject {
       "expandBehavior": behaviors.indexOf(behavior) >= 0 ? behavior : base.expandBehavior,
       "pollingInterval": Math.round(clamp(raw.pollingInterval, 60, 3600, base.pollingInterval)),
       "showProviderLabel": raw.showProviderLabel === true,
-      "showPercentage": false,
+      "showPercentage": raw.showPercentage !== false,
       "showResetTimer": raw.showResetTimer === undefined ? base.showResetTimer : raw.showResetTimer === true,
       "animations": raw.animations === undefined ? base.animations : raw.animations === true,
       "accentColor": Usage.validAccent(raw.accentColor),
@@ -80,6 +96,21 @@ QtObject {
         "cursor": providerColors.cursor === undefined ? base.providerColors.cursor : Usage.validAccent(providerColors.cursor)
       },
       "showInsights": raw.showInsights === undefined ? base.showInsights : raw.showInsights === true,
+      "showSessions": raw.showSessions !== false,
+      "peekOnEvent": raw.peekOnEvent !== false,
+      "peekDuration": [3, 5, 10].indexOf(raw.peekDuration) >= 0 ? raw.peekDuration : 5,
+      "sessionSounds": raw.sessionSounds !== false,
+      "sessionNotifications": raw.sessionNotifications === true,
+      "finishedSound": ["complete", "bell", "message"].indexOf(raw.finishedSound) >= 0 ? raw.finishedSound : "complete",
+      "waitingSound": ["complete", "bell", "message"].indexOf(raw.waitingSound) >= 0 ? raw.waitingSound : "bell",
+      "quotaAlerts": raw.quotaAlerts !== false,
+      "mutedAlerts": { "claude": muted.claude === true, "codex": muted.codex === true,
+        "antigravity": muted.antigravity === true, "cursor": muted.cursor === true },
+      "busyIndicator": raw.busyIndicator === "breath" ? "breath" : "arc",
+      "resetTimeStyle": raw.resetTimeStyle === "date" ? "date" : "remaining",
+      "providerOrder": Activity.providerOrder(raw.providerOrder),
+      "edgeOffsets": { "top": clamp(offsets.top, 0, 1, 0.5), "right": clamp(offsets.right, 0, 1, 0.5),
+        "bottom": clamp(offsets.bottom, 0, 1, 0.5), "left": clamp(offsets.left, 0, 1, 0.5) },
       "enabledProviders": {
         "claude": providers.claude === false
           ? false
@@ -121,6 +152,29 @@ QtObject {
     var current = root.values || root.defaults()
     for (var name in current) next[name] = current[name]
     next[key] = value
+    if (key === "enabledProviders") {
+      var order = Activity.providerOrder(current.providerOrder)
+      order.slice().forEach(function(id) {
+        if (current.enabledProviders[id] === false && value[id] !== false) {
+          order.splice(order.indexOf(id), 1)
+          order.push(id)
+        }
+      })
+      next.providerOrder = order
+    }
+    if (key === "edge") {
+      var offsets = ({})
+      for (var edge in current.edgeOffsets) offsets[edge] = current.edgeOffsets[edge]
+      offsets[current.edge] = current.offset
+      next.offset = offsets[value] === undefined ? 0.5 : offsets[value]
+      next.edgeOffsets = offsets
+    }
+    if (key === "offset") {
+      var positions = ({})
+      for (var side in current.edgeOffsets) positions[side] = current.edgeOffsets[side]
+      positions[current.edge] = value
+      next.edgeOffsets = positions
+    }
     next = root.sanitize(next)
     root.values = next
 

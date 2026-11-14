@@ -19,12 +19,14 @@ The latest product direction intentionally replaces the earlier adaptive-glass e
 
 The motion vocabulary follows the reference rather than using unrelated fades:
 
-- the resting handle unfolds in 420 ms and folds in 220 ms;
+- the resting handle unfolds and folds with a lightly damped spring, following the current reference's fluid shape movement;
 - cells enter toward the desktop with a 45 ms stagger;
 - the tooltip has a 250 ms hover grace period so the pointer can cross the gap;
-- the same tooltip travels between provider cells over 500 ms;
+- the same tooltip travels between provider cells with a damped spring;
 - ring and bar readings settle to new measurements with a lightly overshooting spring (Sileo-inspired) instead of a fixed-duration ease;
 - the card enters with a spring scale and its quota rows rise in a 60 ms stagger.
+
+Version 0.12 adds the current reference's white working arc, optional brand-color breathing disc, amber waiting pulse, settings orb and event peek. Percentages and the usage threshold palette are the default for new configurations; explicitly saved provider colors are retained. See [the reference comparison](codenotch-parity.md) for exact scope.
 
 At rest, the expanded geometry folds into a small black handle. The provider cells remain laid out at their final positions and are revealed by the opening silhouette, avoiding reflow during animation.
 

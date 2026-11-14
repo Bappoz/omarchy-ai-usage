@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
+import "../model/Activity.js" as Activity
 
 PanelWindow {
   id: root
@@ -19,6 +20,16 @@ PanelWindow {
   property bool hoveringCard: false
   property int hoveredIndex: -1
   property bool settingsOpen: false
+  property bool contextOpen: false
+  property var sessions: []
+  property bool sessionsFailed: false
+  property var latestEvent: null
+  property var peekEvent: null
+  readonly property bool peekActive: peekTimer.running
+  readonly property var displaySessions: previewMode ? [
+    { id: "aaaaaaaaaaaaaaaaaaaaaaaa", providerId: "claude", name: "Build workspace", detail: "Terminal · example", state: "busy", pid: null, started: null },
+    { id: "bbbbbbbbbbbbbbbbbbbbbbbb", providerId: "codex", name: "Review changes", detail: "Codex · example", state: "waiting", waitingFor: "Permission or input required", pid: null, started: null }
+  ] : sessions
   property var insights: ({})
   property var insightFailures: ({})
   property var openableApps: ({})
@@ -30,7 +41,11 @@ PanelWindow {
   readonly property real contentGap: 28 * (44 / 117) * sizeScale
   readonly property real screenWidth: targetScreen ? targetScreen.width : 0
   readonly property real screenHeight: targetScreen ? targetScreen.height : 0
-  readonly property var providers: previewMode ? previewProviders() : liveProviders()
+  readonly property var providers: {
+    var list = previewMode ? previewProviders() : liveProviders()
+    var order = Activity.providerOrder(preferences.providerOrder)
+    return list.sort(function(a, b) { return order.indexOf(a.id) - order.indexOf(b.id) })
+  }
   readonly property bool autoHide: preferences.autoHide !== false
   readonly property string expandBehavior: String(preferences.expandBehavior || "hover")
   readonly property real sizeScale: preferences.size === "small" ? 0.85
@@ -38,21 +53,54 @@ PanelWindow {
   readonly property bool motionEnabled: preferences.animations !== false
     && Quickshell.env("OMARCHY_REDUCED_MOTION") !== "1"
   readonly property bool hoverExpansion: autoHide && expandBehavior === "hover"
-  readonly property bool unfolded: !autoHide || forcedOpen || heldOpen || settingsOpen
+  readonly property bool unfolded: !autoHide || forcedOpen || heldOpen || settingsOpen || contextOpen || peekActive
     || (hoverExpansion && (hoveringSurface || hoveringProvider || hoveringCard || hoveringPanel || hoveredIndex >= 0))
-  readonly property bool showCard: settingsOpen
+  readonly property bool showCard: settingsOpen || contextOpen
     || (hoveredIndex >= 0 && hoveredIndex < providers.length && unfolded)
   readonly property var activeProvider: showCard && hoveredIndex >= 0 && hoveredIndex < providers.length
     ? providers[hoveredIndex]
     : null
   readonly property bool insightsEnabled: preferences.showInsights !== false
   readonly property bool showInsights: insightsEnabled && showCard && !settingsOpen
-    && insightsArmed && activeProvider !== null
+    && !contextOpen && !peekActive && insightsArmed && activeProvider !== null
 
   signal refreshRequested(string providerId)
   signal insightsRequested(string providerId)
   signal appRequested(string providerId)
   signal preferenceChanged(string key, var value)
+  signal sessionFocusRequested(var session)
+  signal soundPreviewRequested(string sound)
+
+  function openSettings() {
+    contextOpen = false
+    settingsOpen = !settingsOpen
+    if (settingsOpen && hoveredIndex < 0 && providers.length) hoveredIndex = 0
+  }
+
+  onLatestEventChanged: {
+    if (!latestEvent || preferences.peekOnEvent === false || settingsOpen || heldOpen) return
+    if (Date.now() - latestEvent.at > Number(preferences.peekDuration || 5) * 1000) return
+    for (var i = 0; i < providers.length; i++) {
+      if (providers[i].id === latestEvent.session.providerId) {
+        peekEvent = latestEvent
+        hoveredIndex = i
+        peekTimer.restart()
+        break
+      }
+    }
+  }
+
+  // Keep selection attached to the same account when its order changes.
+  property string selectedProviderId: ""
+  onHoveredIndexChanged: {
+    selectedProviderId = hoveredIndex >= 0 && hoveredIndex < providers.length ? providers[hoveredIndex].id : ""
+  }
+  onProvidersChanged: {
+    if (!selectedProviderId) return
+    var index = providers.findIndex(function(p) { return p.id === root.selectedProviderId })
+    if (index < 0) { settingsOpen = false; contextOpen = false }
+    hoveredIndex = index
+  }
 
   function headlineWindow(value) {
     if (!value || !Array.isArray(value.windows)) return null
@@ -252,7 +300,16 @@ PanelWindow {
 
   WlrLayershell.namespace: "ai-usage-notch"
   WlrLayershell.layer: WlrLayer.Overlay
-  WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+  WlrLayershell.keyboardFocus: root.settingsOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+
+  Timer {
+    id: peekTimer
+    interval: Number(root.preferences.peekDuration || 5) * 1000
+    onTriggered: {
+      root.peekEvent = null
+      if (!root.hoveringSurface && !root.hoveringProvider && !root.hoveringCard && !root.heldOpen) root.hoveredIndex = -1
+    }
+  }
 
   Timer {
     id: hoverGrace
@@ -260,11 +317,13 @@ PanelWindow {
     repeat: false
     onTriggered: {
       if (root.hoveringSurface || root.hoveringProvider || root.hoveringCard || root.hoveringPanel) return
+      if (root.peekActive) return
       if (root.settingsOpen) {
         root.settingsOpen = false
         root.heldOpen = false
       }
       root.hoveredIndex = -1
+      root.contextOpen = false
     }
   }
 
@@ -320,8 +379,21 @@ PanelWindow {
     uiScale: root.sizeScale
     animationsEnabled: root.motionEnabled
     showProviderLabel: root.preferences.showProviderLabel === true
+    showPercentage: root.preferences.showPercentage !== false
     accentColor: String(root.preferences.accentColor || "auto")
     providerColors: root.preferences.providerColors || ({})
+    sessions: root.preferences.showSessions === false ? [] : root.displaySessions
+    busyIndicator: String(root.preferences.busyIndicator || "arc")
+    onSettingsRequested: root.openSettings()
+    onContextRequested: {
+      root.contextOpen = !root.contextOpen
+      root.settingsOpen = false
+      if (root.hoveredIndex < 0 && root.providers.length) root.hoveredIndex = 0
+    }
+    onOffsetDragged: function(delta) {
+      var available = root.horizontalEdge ? root.screenWidth - notch.width : root.screenHeight - notch.height
+      if (available > 0) root.preferenceChanged("offset", Math.max(0, Math.min(1, root.edgeOffset + delta / available)))
+    }
 
     onSurfaceHovered: function(hovered) {
       root.hoveringSurface = hovered
@@ -343,10 +415,18 @@ PanelWindow {
     }
     onProviderActivated: function(index) {
       if (index >= 0 && index < root.providers.length) {
-        root.appRequested(String(root.providers[index].id || ""))
+        if (root.peekActive && root.peekEvent && root.peekEvent.session.pid) {
+          root.sessionFocusRequested(root.peekEvent.session)
+          peekTimer.stop()
+        } else root.refreshRequested(String(root.providers[index].id || ""))
       }
     }
     onBodyActivated: {
+      if (root.peekActive && root.peekEvent && root.peekEvent.session.pid) {
+        root.sessionFocusRequested(root.peekEvent.session)
+        peekTimer.stop()
+        return
+      }
       root.heldOpen = !root.heldOpen
       if (root.heldOpen && root.hoveredIndex < 0 && root.providers.length > 0) root.hoveredIndex = 0
       if (!root.heldOpen) root.settingsOpen = false
@@ -376,17 +456,30 @@ PanelWindow {
     accentColor: String(root.preferences.accentColor || "auto")
     providerColors: root.preferences.providerColors || ({})
     settingsOpen: root.settingsOpen
+    contextOpen: root.contextOpen
+    heldOpen: root.heldOpen
+    sessions: root.preferences.showSessions === false ? [] : Activity.summary(root.displaySessions, root.activeProvider ? root.activeProvider.id : "").sessions
+    sessionsFailed: root.sessionsFailed
+    sessionMonitoring: root.preferences.showSessions !== false
+    maxBodyHeight: Math.max(120, root.screenHeight - 2 * root.contentGap - (root.horizontalEdge ? notch.height + expandedCard.tailLength : 0))
     preferences: root.preferences
     canOpenApp: root.activeProvider !== null && root.openableApps[String(root.activeProvider.id)] !== undefined
     onAppRequested: root.appRequested(String(root.activeProvider ? root.activeProvider.id : ""))
     onSettingsRequested: {
-      root.settingsOpen = !root.settingsOpen
+      root.openSettings()
       if (root.settingsOpen) {
         root.heldOpen = false
         if (root.hoveredIndex < 0 && root.providers.length > 0) root.hoveredIndex = 0
       }
     }
     onPreferenceChanged: function(key, value) { root.preferenceChanged(key, value) }
+    onSoundPreviewRequested: function(sound) { root.soundPreviewRequested(sound) }
+    onSessionFocusRequested: function(session) { root.sessionFocusRequested(session) }
+    onRefreshRequested: {
+      if (root.activeProvider) root.refreshRequested(root.activeProvider.id)
+      root.contextOpen = false
+    }
+    onPinRequested: { root.heldOpen = !root.heldOpen; root.contextOpen = false }
     onCardHovered: function(hovered) {
       root.hoveringCard = hovered
       if (hovered) hoverGrace.stop()
@@ -394,10 +487,12 @@ PanelWindow {
     }
 
     Behavior on x {
-      NumberAnimation { duration: root.motionEnabled ? 500 : 0; easing.type: Easing.OutCubic }
+      enabled: root.motionEnabled
+      SpringAnimation { spring: 3.2; damping: 0.45; epsilon: 0.1 }
     }
     Behavior on y {
-      NumberAnimation { duration: root.motionEnabled ? 500 : 0; easing.type: Easing.OutCubic }
+      enabled: root.motionEnabled
+      SpringAnimation { spring: 3.2; damping: 0.45; epsilon: 0.1 }
     }
     Behavior on opacity {
       NumberAnimation { duration: root.motionEnabled ? 180 : 0; easing.type: Easing.OutCubic }
@@ -420,6 +515,7 @@ PanelWindow {
     transformOrigin: root.edge === "right" ? Item.Right
       : (root.edge === "left" ? Item.Left : (root.edge === "top" ? Item.Top : Item.Bottom))
     shown: root.showInsights
+    sessions: root.preferences.showSessions === false ? [] : Activity.summary(root.displaySessions, root.panelProvider ? root.panelProvider.id : "").sessions
     providerId: root.panelProvider ? String(root.panelProvider.id || "") : "claude"
     providerName: root.panelProvider ? String(root.panelProvider.displayName || "") : ""
     insights: root.panelProvider ? (root.insights[String(root.panelProvider.id)] || null) : null

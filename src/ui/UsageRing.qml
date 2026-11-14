@@ -17,6 +17,8 @@ Item {
   property string accentColor: "auto"
   property string providerColor: "auto"
   property string accessibleName: "Usage"
+  property string activityState: "idle"
+  property string busyIndicator: "arc"
 
   readonly property bool hasReading: typeof usedPercent === "number" && isFinite(usedPercent)
   readonly property real safeUsed: hasReading ? Math.max(0, Math.min(100, usedPercent)) : 0
@@ -87,6 +89,15 @@ Item {
         sweepAngle: 359.9 * Math.max(0, Math.min(1, root.animatedFraction))
       }
     }
+  }
+
+  ActivityIndicator {
+    anchors.fill: parent
+    activityState: root.activityState
+    style: root.busyIndicator
+    active: root.active
+    animationsEnabled: root.animationsEnabled
+    brandColor: Usage.PROVIDER_TINTS[root.providerId] || "#ffffff"
   }
 
   ProviderGlyph {

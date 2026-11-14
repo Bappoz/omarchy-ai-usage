@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Effects
 
 Item {
   id: root
@@ -9,7 +8,7 @@ Item {
     : (providerId === "claude" || providerId === "antigravity" ? 0.97 : 1.0)
 
   function glyphSource() {
-    if (root.providerId === "claude") return Qt.resolvedUrl("../assets/glyphs/claude.svg")
+    if (root.providerId === "claude") return Qt.resolvedUrl("../assets/glyphs/claude-brand.svg")
     if (root.providerId === "perplexity") return Qt.resolvedUrl("../assets/glyphs/perplexity.svg")
     if (root.providerId === "antigravity") return Qt.resolvedUrl("../assets/glyphs/antigravity.png")
     if (root.providerId === "cursor") return Qt.resolvedUrl("../assets/glyphs/cursor.svg")
@@ -27,15 +26,5 @@ Item {
     fillMode: Image.PreserveAspectFit
     smooth: true
     mipmap: true
-    visible: root.providerId !== "claude"
-    layer.enabled: root.providerId === "claude"
-  }
-
-  MultiEffect {
-    anchors.fill: glyphImage
-    source: glyphImage
-    visible: root.providerId === "claude"
-    colorization: 1.0
-    colorizationColor: "#D97757"
   }
 }

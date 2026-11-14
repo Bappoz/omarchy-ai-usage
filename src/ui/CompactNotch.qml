@@ -1,4 +1,6 @@
 import QtQuick
+import QtQuick.Shapes
+import "../model/Activity.js" as Activity
 
 Item {
   id: root
@@ -11,13 +13,22 @@ Item {
   property real uiScale: 1
   property bool animationsEnabled: true
   property bool showProviderLabel: false
+  property bool showPercentage: true
   property string accentColor: "auto"
   property var providerColors: ({})
+  property var sessions: []
+  property string busyIndicator: "arc"
+  property real dragStart: 0
+  property real dragDistance: 0
+  property real dragPrevious: 0
 
   signal surfaceHovered(bool hovered)
   signal providerHovered(int index, bool hovered)
   signal providerActivated(int index)
   signal bodyActivated()
+  signal settingsRequested()
+  signal contextRequested()
+  signal offsetDragged(real delta)
 
   readonly property bool verticalEdge: edge === "left" || edge === "right"
   readonly property real designScale: (44 / 117) * uiScale
@@ -76,10 +87,8 @@ Item {
   }
 
   Behavior on openProgress {
-    NumberAnimation {
-      duration: root.animationsEnabled ? (root.unfolded ? 420 : 220) : 0
-      easing.type: root.unfolded ? Easing.OutCubic : Easing.InCubic
-    }
+    enabled: root.animationsEnabled
+    SpringAnimation { spring: 3.8; damping: 0.38; epsilon: 0.001 }
   }
 
   EdgeNotchSurface {
@@ -89,6 +98,7 @@ Item {
     width: root.surfaceWidth
     height: root.surfaceHeight
     edge: root.edge
+    uiScale: root.uiScale
   }
 
   MouseArea {
@@ -98,9 +108,30 @@ Item {
     width: root.inputWidth
     height: root.inputHeight
     hoverEnabled: true
+    acceptedButtons: Qt.LeftButton | Qt.RightButton
+    preventStealing: true
     cursorShape: root.unfolded ? Qt.ArrowCursor : Qt.PointingHandCursor
     onContainsMouseChanged: root.surfaceHovered(containsMouse)
-    onClicked: root.bodyActivated()
+    onPressed: function(mouse) {
+      var scene = mapToItem(null, mouse.x, mouse.y)
+      root.dragStart = root.verticalEdge ? scene.y : scene.x
+      root.dragPrevious = root.dragStart
+      root.dragDistance = 0
+    }
+    onPositionChanged: function(mouse) {
+      if (pressed && (mouse.modifiers & Qt.AltModifier)) {
+        var scene = mapToItem(null, mouse.x, mouse.y)
+        var position = root.verticalEdge ? scene.y : scene.x
+        root.dragDistance = position - root.dragStart
+        if (Math.abs(root.dragDistance) > 3) root.offsetDragged(position - root.dragPrevious)
+        root.dragPrevious = position
+      }
+    }
+    onClicked: function(mouse) {
+      if (Math.abs(root.dragDistance) > 3) return
+      if (mouse.button === Qt.RightButton) root.contextRequested()
+      else root.bodyActivated()
+    }
   }
 
   Repeater {
@@ -160,6 +191,8 @@ Item {
           accentColor: root.accentColor
           providerColor: String((root.providerColors || ({}))[String(cell.modelData.id || "")] || "auto")
           accessibleName: String(cell.modelData.displayName || "Provider") + " usage"
+          activityState: Activity.summary(root.sessions, String(cell.modelData.id)).state
+          busyIndicator: root.busyIndicator
         }
 
         Text {
@@ -168,8 +201,10 @@ Item {
           height: root.percentLineHeight
           horizontalAlignment: Text.AlignHCenter
           verticalAlignment: Text.AlignVCenter
-          visible: root.showProviderLabel
-          text: String(cell.modelData.displayName || "Provider")
+          visible: root.showProviderLabel || root.showPercentage
+          text: (root.showProviderLabel ? String(cell.modelData.displayName || "Provider") : "")
+            + (root.showProviderLabel && root.showPercentage ? " · " : "")
+            + (root.showPercentage ? (typeof cell.modelData.usedPercent === "number" ? Math.round(cell.modelData.usedPercent) + "%" : "—") : "")
           textFormat: Text.PlainText
           color: "#ffffff"
           opacity: cell.modelData.stale ? 0.45 : 1
@@ -187,7 +222,11 @@ Item {
         cursorShape: Qt.PointingHandCursor
         enabled: cell.enabled
         onContainsMouseChanged: root.providerHovered(cell.index, containsMouse)
-        onClicked: root.providerActivated(cell.index)
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        onClicked: function(mouse) {
+          if (mouse.button === Qt.RightButton) root.contextRequested()
+          else root.providerActivated(cell.index)
+        }
       }
 
       Accessible.role: Accessible.Button
@@ -197,5 +236,48 @@ Item {
         : "Usage unavailable"
       Accessible.onPressAction: root.providerActivated(index)
     }
+  }
+
+  // CodeNotch's settings orb: a quiet arc at rest, a gear on hover.
+  Item {
+    id: orb
+    width: 24 * root.uiScale
+    height: width
+    x: root.verticalEdge ? (root.fullDepth - width) / 2 : root.fullLength - root.curl - width
+    y: root.verticalEdge ? root.fullLength - root.curl - height : (root.fullDepth - height) / 2
+    opacity: root.unfolded && root.openProgress >= 0.995 ? 1 : 0
+    visible: opacity > 0
+    Behavior on opacity { NumberAnimation { duration: root.animationsEnabled ? 200 : 0 } }
+    Shape {
+      anchors.fill: parent
+      visible: !orbMouse.containsMouse
+      preferredRendererType: Shape.CurveRenderer
+      ShapePath {
+        strokeWidth: 1.5 * root.uiScale; strokeColor: "#808080"; fillColor: "transparent"
+        capStyle: ShapePath.RoundCap
+        PathAngleArc {
+          centerX: orb.width / 2; centerY: orb.height / 2
+          radiusX: orb.width * 0.26; radiusY: orb.height * 0.26
+          startAngle: 25; sweepAngle: 130
+        }
+      }
+    }
+    Image {
+      anchors.centerIn: parent
+      width: 14 * root.uiScale; height: width
+      source: "../assets/icons/settings.svg"
+      visible: orbMouse.containsMouse
+    }
+    MouseArea {
+      id: orbMouse
+      anchors.fill: parent
+      hoverEnabled: true
+      cursorShape: Qt.PointingHandCursor
+      onContainsMouseChanged: root.surfaceHovered(containsMouse)
+      onClicked: root.settingsRequested()
+    }
+    Accessible.role: Accessible.Button
+    Accessible.name: "Open preferences"
+    Accessible.onPressAction: root.settingsRequested()
   }
 }

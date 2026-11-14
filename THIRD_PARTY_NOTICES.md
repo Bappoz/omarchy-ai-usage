@@ -4,6 +4,8 @@
 
 Visual geometry, layout measurements, usage thresholds, motion timing, tooltip behavior, and the edge-notch interaction model are adapted from CodeNotch revision `ec1a7e3fc0634f668741cb0357029420bdd4281c`.
 
+Session lifecycle interpretation, completion-transition rules, working/waiting indicators, peek durations, ring-click refresh, settings-orb behavior and remembered placement are additionally adapted from CodeNotch `835550a342871779135b6484d6899161c5222f7c` (1.25.0). The Linux implementation uses Python, QML and Hyprland rather than AppKit or Darwin.
+
 MIT License
 
 Copyright (c) 2026 Vinz
@@ -16,7 +18,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ## Lobe Icons
 
-`src/assets/glyphs/claude.svg` and `src/assets/glyphs/codex.svg` are simplified copies of the Claude and OpenAI SVGs distributed by `@lobehub/icons-static-svg` and documented in CodeNotch's Windows port.
+`src/assets/glyphs/claude.svg` and `src/assets/glyphs/codex.svg` are simplified copies of the Claude and OpenAI SVGs distributed by `@lobehub/icons-static-svg` and documented in CodeNotch's Windows port. `claude-brand.svg` is a directly tinted derivative of the same Claude mark.
 
 MIT License
 

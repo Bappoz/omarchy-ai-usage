@@ -7,7 +7,7 @@ Watch Claude Code, Codex, Antigravity, and Cursor quota windows from a small not
 
 [![CI](https://github.com/Bappoz/omarchy-ai-usage/actions/workflows/ci.yml/badge.svg)](https://github.com/Bappoz/omarchy-ai-usage/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![Version](https://img.shields.io/badge/version-0.11.0-informational)
+![Version](https://img.shields.io/badge/version-0.12.0-informational)
 ![Omarchy](https://img.shields.io/badge/Omarchy-4.0%2B-black)
 
 <img src="docs/assets/hero.png" alt="The usage rail, a Claude usage card and the activity panel" width="760">
@@ -31,17 +31,26 @@ Watch Claude Code, Codex, Antigravity, and Cursor quota windows from a small not
 - Opens beside the provider card with the current model and effort, a live indicator while it is in use, a 24-hour token sparkline with hover readout, 24h and 7-day totals, and a per-model breakdown.
 - Built from local Claude Code and Codex session logs. Other providers show their quota windows but do not claim token totals without a supported local source. It can be turned off (see [Privacy](#privacy-and-security)).
 
+**Live agent sessions**
+- A thin white arc while Claude or Codex works, an amber pulse when it needs input, and a completion indicator. Choose a breathing disc instead of the arc in settings.
+- Session names, application context and state in the provider card. Click a session with a known process to focus its owning Hyprland application.
+- A 3-, 5- or 10-second peek on completion or waiting, with independent sound controls and optional desktop notifications. Initial readings and sessions disappearing never trigger a completion alert.
+- Once-per-window quota alerts at 80% and 100%, with per-provider mute controls. Quota refreshes every 30 seconds during observed work through the existing Omarchy collector.
+
+The [CodeNotch comparison](docs/codenotch-parity.md) records remaining differences, including financial balances/reset credits, additional providers, multiple accounts and phone pairing. This release does not claim complete upstream parity.
+
 **Make it yours**
 - Any accent color (`#RRGGBB`), or the built-in provider tints and usage scale.
 - Top, right, bottom, or left edge; continuous position; focused, named, or all displays.
 - Small, medium, and large sizes; hover, click, or always-open behavior.
+- General, Accounts, Activity and Alerts settings tabs; reorder rings, choose a real monitor, enter a custom hex color, or Alt-drag the body to reposition. Each edge remembers its own position.
 
 **Motion that feels right**
 - Spring-based sweeps, entrances, and hover feedback inspired by [Sileo](https://tailkits.com/components/sileo/); rings appear only after the silhouette has finished unfolding and sweep in on every open.
 - One switch (or `OMARCHY_REDUCED_MOTION=1`) turns all of it off.
 
-**One click to the app**
-- Click a provider logo, on the rail or in the card header, to open its app or web app.
+**One click to refresh or focus**
+- Click a ring to refresh its quota, the provider mark in the card header to open its app, or a session/event peek to focus the application running that agent.
 
 ## Gallery
 
@@ -96,12 +105,16 @@ omarchy plugin enable ai-usage.notch
 | Hover a ring | That provider's usage card, with pace markers and reset times |
 | Keep the pointer on the card | The activity panel slides in beside it |
 | Hover the sparkline | The token count for that hour |
-| Click a provider logo | The provider's app opens |
-| Click the sliders icon in the card | Preferences |
+| Click a provider ring | Refresh that provider's usage |
+| Click the provider logo in the card | The provider's app opens |
+| Click a live session or event peek | Focus its owning application, when a process is known |
+| Click the settings orb or sliders icon | Preferences |
+| Right-click the notch | Keep open / Refresh now / Preferences |
+| Alt-drag the body | Move along the edge |
 
 ## Configure
 
-Open a provider card and select the sliders icon. Each row cycles through its supported values, changes apply live, and they are saved through Omarchy's scoped plugin API. All four providers are enabled automatically; at least one provider stays enabled.
+Use the settings orb or the sliders icon in a provider card. Choices apply live and are saved through Omarchy's scoped plugin API. Rows cycle values; position also has a slider, accent has a validated hex field, and Accounts has ordering buttons. All four providers are enabled automatically; the switches keep at least one provider enabled.
 
 | Setting | Choices | Default | What it changes |
 | --- | --- | --- | --- |
@@ -113,11 +126,17 @@ Open a provider card and select the sliders icon. Each row cycles through its su
 | Auto-hide | On, off | On | Whether an idle rail collapses to the edge pill |
 | Refresh interval | 5, 15, 30, 60 minutes | 15 minutes | Hidden fallback reread; a visible card requests fresh data every 30 seconds |
 | Claude / Codex / Antigravity / Cursor | On, off | On | Which live providers appear |
-| Provider label / reset time | On, off | On | Compact-surface density |
-| Provider colors | Auto or preset per provider | Brand colors | Ring, quota bar, and activity chart colors |
+| Provider label / percentage / reset time | On, off | Off / on / on | Compact-surface density |
+| Provider colors | Auto or preset per provider | Auto | Ring, quota bar, and activity chart colors |
 | Accent color | Auto, seven presets, any hex via `shell.json` | Auto | Global fallback color; provider colors override it |
 | Insights panel | On, off | On | The activity panel beside the card |
 | Motion | On, off | On | Surface animation; off for a static UI |
+| Live sessions / working indicator | On, off / arc, breath | On / arc | Local agent monitoring and working animation |
+| Event peek / duration | On, off / 3, 5, 10 seconds | On / 5 seconds | Automatically reveal completion or waiting |
+| Session sounds / notifications | Independent on, off | On / off | Sounds and optional desktop messages |
+| Finished / waiting sounds | Complete, bell, message | Complete / bell | Separate events, with preview buttons |
+| Quota alerts / provider mute | On, off / mute per provider | On / unmuted | One alert per threshold crossing per window |
+| Reset display | Time remaining, reset date | Time remaining | Clock-driven countdown or date |
 
 For an exact connector or a continuous position, edit the plugin entry in `~/.config/omarchy/shell.json`:
 
@@ -151,6 +170,9 @@ For an exact connector or a continuous position, edit the plugin entry in `~/.co
 | `omarchy-shell omarchy.agents refresh` | Fresh data when a card opens and every 30 seconds while visible | Fixed IPC request, single-flight, 15-second cooldown |
 | Orca `account list --json` | Antigravity and Cursor quota windows | Local CLI output is normalized in memory; only quota percentages, reset times and plan labels reach the UI |
 | Local session logs (`~/.claude/projects`, `~/.codex/sessions`) | Activity panel | Read-only, only while the panel is visible, aggregated in a helper; can be turned off |
+| Claude session registry, bounded Claude/Codex log tails, same-user `/proc` metadata | Live sessions and event peeks | One shared local watcher, two-second cadence, unchanged tails cached; disable with `showSessions: false` |
+| `hyprctl clients -j` and validated ancestor pid | Focus a session | Only on a session/peek click; no command-line, prompt or terminal-content collection |
+| Freedesktop notifications and sound events | Quota/session alerts | Optional notifications; independent sounds; missing services fail quietly |
 | `gtk-launch` / `omarchy-launch-webapp` | Opening the app on logo click | Fixed commands, no user-controlled arguments |
 
 Authentication stays with provider clients. Claude and Codex quotas come from Omarchy; Antigravity and Cursor quotas come from Orca. Gemini is intentionally not displayed as a separate provider. See [Provider feasibility](docs/provider-feasibility.md) for details.
@@ -225,9 +247,9 @@ Marketplace maintainers validate the current public commit before approval; see 
 
 Omarchy plugins are not sandboxed, so this one keeps a narrow, documented data boundary:
 
-- It never reads credential files, tokens, browser storage, or stores raw provider responses. It never starts Claude Code, Codex, or the Omarchy usage collector. It queries Orca's local quota CLI for Antigravity and Cursor and retains only sanitized quota fields. It launches an app only when you click its logo.
+- It never reads credential files, tokens, browser storage, or stores raw provider responses. It never starts Claude Code, Codex, or the Omarchy usage collector. It queries Orca's local quota CLI for Antigravity and Cursor and retains only sanitized quota fields. It launches an app only when you click its card logo.
 - Quota snapshots contain usage windows, percentages, reset times, and an optional plan label, never tokens or account identifiers.
-- The activity panel is the one exception to "records only". Session logs contain conversations, so the helper keeps only a timestamp, model name, effort label, and token counts per request, and emits aggregates. Prompts, tool output, file paths, and session ids never leave it, and a test asserts that conversation text does not appear in its output. Disable the panel with `showInsights: false`.
+- Session logs contain conversations. The activity helper emits only timestamp/model/count aggregates; prompts and tool output never leave it. Disable it with `showInsights: false`. The separate live-session watcher reads registry metadata and bounded cached log tails, emitting a sanitized session name, workspace basename, state, hashed handle and same-user process identity. It never emits prompts, tool arguments, responses, full paths or credentials. Disable it independently with `showSessions: false`.
 - The repository contains no real provider output or account data.
 
 See the [Security policy](SECURITY.md) for the full model.

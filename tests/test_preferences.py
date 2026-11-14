@@ -73,7 +73,7 @@ class PreferenceTests(unittest.TestCase):
     def test_reduced_motion_override_disables_all_surface_motion(self) -> None:
         self.assertIn('Quickshell.env("OMARCHY_REDUCED_MOTION") !== "1"', self.window)
         self.assertIn("animationsEnabled: root.motionEnabled", self.window)
-        self.assertIn("duration: root.motionEnabled ? 500 : 0", self.window)
+        self.assertIn("enabled: root.motionEnabled", self.window)
         ring = (ROOT / "src" / "ui" / "UsageRing.qml").read_text()
         self.assertIn("enabled: root.animationsEnabled", ring)
 

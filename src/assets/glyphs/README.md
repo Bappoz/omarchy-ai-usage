@@ -1,6 +1,7 @@
 # Provider glyphs
 
 - `claude.svg`: Lobe Icons Claude mark, MIT.
+- `claude-brand.svg`: the same mark filled with Claude orange `#D97757`; no shader is required.
 - `codex.svg`: Lobe Icons OpenAI mark, MIT, matching CodeNotch's Codex cell.
 - `perplexity.svg`: Simple Icons Perplexity mark, CC0 1.0 Universal.
 - `antigravity.png`: Google Antigravity official full-color symbol, rasterized at 720×720 for reliable gradient rendering in Quickshell. Source SVG: `https://antigravity.google/assets/image/brand/antigravity-icon__full-color.svg`.

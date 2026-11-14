@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.12.0
+
+- Port CodeNotch session interaction: a white working arc (or optional breathing disc), amber waiting ring, completion state, per-session details and a configurable 3/5/10-second peek. Claude uses its process registry with a cached transcript fallback; Codex uses cached bounded rollout tails and live process descriptors.
+- Focus the owning Hyprland application from a session row or event peek, validating process identity before following its ancestors. A regular ring click refreshes usage; the card's provider mark still opens its app.
+- Add independent session sounds, sound selection and previews, optional desktop session notifications and per-provider quota alerts at 80% and 100%. Initial readings, disappearing sessions, malformed records and answered questions do not announce completion; quota alerts latch until an observed window rollover.
+- Refresh quota every 30 seconds while an observed session is busy, with the existing shared-owner IPC cooldown and single-flight protection.
+- Add the settings orb, right-click Keep open / Refresh now menu, live Alt-drag positioning, per-edge remembered offsets, provider order and re-enable-at-end behavior.
+- Split settings into General, Accounts, Activity and Alerts. Add a continuous position slider, actual monitor choices, custom hex input, reset-date/countdown modes and independent live-session monitoring.
+- Use a true one-second reset countdown, percent labels and threshold colors for new configurations, fluid spring unfolding/gliding and scale-correct edge geometry. Existing explicit colors remain intact.
+- Render the Claude brand tint directly in SVG, avoiding a shader pass and keeping the mark visible with Qt's software renderer.
+- Add behavioral transition, liveness, privacy, focus, rollover and native QML smoke checks. Record remaining upstream gaps in `docs/codenotch-parity.md`; this is not a claim of complete CodeNotch parity.
+
 ## 0.11.0
 
 - Fix provider rings appearing before the edge handle finished unfolding: they now fade in only once the silhouette is fully open, and each ring sweeps in from empty on every open.

@@ -54,6 +54,14 @@ QML consumes only helper stdout and never logs provider output or stderr. A malf
 
 ## Persistence
 
+### Live sessions and event effects
+
+`SessionStore` owns one optional streaming `session_provider.py --watch` process, shared by all display delegates. It validates each bounded document and keeps a previous-state map through pure `Activity.js` transition logic. Only leaving busy for waiting/idle/success emits an event. Startup, unknown data, watcher failure and vanished processes never imply completion. The helper reads Claude's registry and cached transcript tails, and Codex's cached rollout lifecycle records plus same-user open descriptors. Disabling session monitoring clears the store and stops the process.
+
+`Main` handles sounds, desktop messages and completion quota refresh once globally. Display delegates receive the same event for their local, time-bounded peek. `ProviderStore` requests quota every 30 seconds during observed busy work using the same single-flight shared-owner path as visible cards. `Activity.quotaCrossings` latches 80/100 thresholds until an observed reset boundary rolls over; stale/error readings do not alert. Session focus runs only after a click and checks pid identity before finding a Hyprland ancestor client.
+
+Settings are grouped within a clipped, height-bounded card. Pointer dragging and slider changes use the existing scoped preferences write path; per-edge offsets and normalized provider order are presentation state. The shell requests keyboard focus on demand only while settings is open, for the validated hex field. All continuous indicators stop under reduced motion or when hidden.
+
 - Configuration: the plugin's inline entry in `~/.config/omarchy/shell.json`, written by Omarchy's scoped plugin facade.
 - Shared provider state: `$XDG_STATE_HOME/omarchy/agents/usage/{claude,codex}.json`, written atomically by `omarchy.agents` and consumed read-only by the notch.
 

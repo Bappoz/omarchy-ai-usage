@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Shapes
 import "Usage.js" as Usage
+import "../model/Activity.js" as Activity
 
 Item {
   id: root
@@ -16,6 +17,12 @@ Item {
   property bool animationsEnabled: true
   property bool showResetTimer: true
   property bool settingsOpen: false
+  property bool contextOpen: false
+  property bool heldOpen: false
+  property var sessions: []
+  property bool sessionsFailed: false
+  property bool sessionMonitoring: true
+  property real maxBodyHeight: 900
   property string accentColor: "auto"
   property var providerColors: ({})
   property bool canOpenApp: false
@@ -25,6 +32,10 @@ Item {
   signal settingsRequested()
   signal appRequested()
   signal preferenceChanged(string key, var value)
+  signal sessionFocusRequested(var session)
+  signal soundPreviewRequested(string sound)
+  signal refreshRequested()
+  signal pinRequested()
 
   readonly property bool horizontalEdge: edge === "top" || edge === "bottom"
   readonly property real designScale: (44 / 117) * uiScale
@@ -39,7 +50,7 @@ Item {
   readonly property real labelToBar: 16.8 * designScale
   readonly property real barToUsed: 17.8 * designScale
   readonly property real blockSpacing: 20 * designScale
-  readonly property real bodyHeight: content.implicitHeight + 2 * cardPadding
+  readonly property real bodyHeight: Math.min(maxBodyHeight, content.implicitHeight + 2 * cardPadding)
   readonly property real bodyX: edge === "left" ? tailLength : 0
   readonly property real bodyY: edge === "top" ? tailLength : 0
   readonly property var windows: snapshot && Array.isArray(snapshot.windows)
@@ -84,19 +95,7 @@ Item {
 
   function formatReset(window) {
     if (!root.showResetTimer) return ""
-    if (window && window.resetCopy) return String(window.resetCopy)
-    var value = window ? window.resetAt : null
-    if (value === null || value === undefined || String(value) === "") return ""
-    var parsed = new Date(String(value))
-    if (isNaN(parsed.getTime())) return ""
-    var minutes = Math.max(0, Math.round((parsed.getTime() - Date.now()) / 60000))
-    if (minutes < 60) return "Resets in " + minutes + " min"
-    if (minutes < 24 * 60) {
-      var hours = Math.floor(minutes / 60)
-      var rest = minutes % 60
-      return "Resets in " + hours + "h" + (rest > 0 ? " " + rest + " min" : "")
-    }
-    return "Resets " + Qt.formatDateTime(parsed, "ddd h:mm AP")
+    return Activity.resetCopy(window, root.nowMs, root.preferences.resetTimeStyle || "remaining")
   }
 
   function tailPath() {
@@ -123,7 +122,7 @@ Item {
   }
 
   Timer {
-    interval: 30000
+    interval: 1000
     repeat: true
     running: root.visible
     onTriggered: root.nowMs = Date.now()
@@ -159,11 +158,20 @@ Item {
     color: "#000000"
   }
 
-  Column {
-    id: content
+  Flickable {
+    id: viewport
     x: root.bodyX + root.cardPadding
     y: root.bodyY + root.cardPadding
     width: root.bodyWidth - 2 * root.cardPadding
+    height: Math.max(1, root.bodyHeight - 2 * root.cardPadding)
+    contentWidth: width
+    contentHeight: content.implicitHeight
+    clip: true
+    boundsBehavior: Flickable.StopAtBounds
+
+  Column {
+    id: content
+    width: viewport.width
     spacing: 0
 
     RowLayout {
@@ -281,7 +289,7 @@ Item {
     Item { width: 1; height: root.headerToBlock }
 
     Text {
-      visible: !root.settingsOpen && root.windows.length === 0
+      visible: !root.settingsOpen && !root.contextOpen && root.windows.length === 0
       width: parent.width
       text: root.snapshot && root.snapshot.message
         ? String(root.snapshot.message)
@@ -294,7 +302,7 @@ Item {
     }
 
     Repeater {
-      model: root.settingsOpen ? [] : root.windows
+      model: root.settingsOpen || root.contextOpen ? [] : root.windows
 
       delegate: Column {
         id: limitRow
@@ -351,7 +359,7 @@ Item {
           color: "#2d2d2d"
 
           Rectangle {
-            width: limitRow.used === null
+            width: limitRow.used === null || limitRow.used <= 0
               ? 0
               : Math.min(parent.width, Math.max(root.barHeight, parent.width * limitRow.used / 100))
             height: parent.height
@@ -412,8 +420,115 @@ Item {
       width: parent.width
       preferences: root.preferences
       uiScale: root.uiScale
+      animationsEnabled: root.animationsEnabled
       onPreferenceChanged: function(key, value) { root.preferenceChanged(key, value) }
+      onSoundPreviewRequested: function(sound) { root.soundPreviewRequested(sound) }
     }
+
+    Column {
+      width: parent.width
+      visible: root.contextOpen
+      spacing: 4 * root.uiScale
+      Repeater {
+        model: [root.heldOpen ? "Release keep open" : "Keep open", "Refresh now", "Preferences"]
+        delegate: Rectangle {
+          required property string modelData
+          required property int index
+          width: content.width; height: 32 * root.uiScale; radius: 8 * root.uiScale
+          color: actionMouse.containsMouse ? "#202020" : "transparent"
+          opacity: index === 0 && root.preferences.autoHide === false ? 0.4 : 1
+          Text {
+            anchors.verticalCenter: parent.verticalCenter
+            leftPadding: 8 * root.uiScale
+            text: modelData; textFormat: Text.PlainText; color: "#ffffff"; font.pixelSize: 11 * root.uiScale
+          }
+          MouseArea {
+            id: actionMouse
+            anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+            enabled: parent.index !== 0 || root.preferences.autoHide !== false
+            onClicked: {
+              if (parent.index === 0) root.pinRequested()
+              else if (parent.index === 1) root.refreshRequested()
+              else root.settingsRequested()
+            }
+          }
+          Accessible.role: Accessible.Button
+          Accessible.name: modelData
+        }
+      }
+    }
+
+    Column {
+      width: parent.width
+      visible: !root.settingsOpen && !root.contextOpen && root.sessionMonitoring
+      spacing: 8 * root.uiScale
+      Item { width: 1; height: root.blockSpacing / 2 }
+      Rectangle { width: parent.width; height: 1; color: "#202020" }
+      Text {
+        text: "Sessions"; color: "#ffffff"; font.pixelSize: 10 * root.uiScale; font.weight: Font.DemiBold
+      }
+      Text {
+        visible: root.sessions.length === 0
+        width: parent.width; wrapMode: Text.Wrap; textFormat: Text.PlainText
+        text: root.sessionsFailed ? "Session monitoring unavailable. Retrying…"
+          : (["claude", "codex"].indexOf(root.providerId) < 0
+            ? "Live sessions are not available for this provider."
+            : "No live sessions detected.")
+        color: "#808080"; font.pixelSize: 9 * root.uiScale
+      }
+      Repeater {
+        model: root.sessions
+        delegate: Rectangle {
+          id: sessionRow
+          required property var modelData
+          width: content.width; height: sessionText.implicitHeight + 12 * root.uiScale
+          radius: 8 * root.uiScale
+          color: sessionMouse.containsMouse && modelData.pid ? "#202020" : "transparent"
+          ActivityIndicator {
+            x: 0; y: 3 * root.uiScale; width: 23 * root.uiScale; height: width
+            activityState: sessionRow.modelData.state
+            animationsEnabled: root.animationsEnabled
+            active: root.visible
+          }
+          Column {
+            id: sessionText
+            x: 27 * root.uiScale; y: 6 * root.uiScale
+            width: parent.width - x - 4 * root.uiScale
+            spacing: 3 * root.uiScale
+            Text {
+              width: parent.width; elide: Text.ElideRight
+              text: sessionRow.modelData.name; textFormat: Text.PlainText
+              color: "#ffffff"; font.pixelSize: 10 * root.uiScale
+            }
+            Text {
+              width: parent.width; elide: Text.ElideRight; textFormat: Text.PlainText
+              text: sessionRow.modelData.state === "waiting" ? "Waiting · permission or input"
+                : (sessionRow.modelData.state === "busy" ? "Working" : (sessionRow.modelData.state === "success" ? "Complete" : (sessionRow.modelData.state === "unknown" ? "State unavailable" : "Idle")))
+                + " · " + sessionRow.modelData.detail
+              color: sessionRow.modelData.state === "waiting" ? "#ffb340" : "#808080"
+              font.pixelSize: 9 * root.uiScale
+            }
+          }
+          MouseArea {
+            id: sessionMouse
+            anchors.fill: parent; hoverEnabled: true
+            cursorShape: sessionRow.modelData.pid ? Qt.PointingHandCursor : Qt.ArrowCursor
+            onClicked: if (sessionRow.modelData.pid) root.sessionFocusRequested(sessionRow.modelData)
+          }
+          Accessible.role: Accessible.Button
+          Accessible.name: modelData.name + ", " + modelData.state
+          Accessible.onPressAction: if (modelData.pid) root.sessionFocusRequested(modelData)
+        }
+      }
+    }
+
+    Text {
+      visible: !root.settingsOpen && !root.contextOpen && root.snapshot && root.snapshot.lastUpdated !== null
+      width: parent.width; topPadding: 10 * root.uiScale
+      text: "Read " + Usage.agoLabel(root.snapshot ? root.snapshot.lastUpdated : null, root.nowMs)
+      textFormat: Text.PlainText; color: "#808080"; font.pixelSize: 8 * root.uiScale
+    }
+  }
   }
 
   MouseArea {

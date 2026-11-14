@@ -12,6 +12,7 @@ QtObject {
   property bool previewMode: Quickshell.env("OMARCHY_AI_USAGE_PREVIEW") === "1"
   property int pollingIntervalSeconds: 900
   property var enabledProviders: ({ "claude": true, "codex": true, "antigravity": true, "cursor": true })
+  property var activeProviderIds: []
   property bool officialRefreshPending: false
   property double lastOfficialRefreshMs: 0
   readonly property int officialRefreshCooldownMs: 15000
@@ -48,6 +49,18 @@ QtObject {
     if (codexRunner.enabled) codexRunner.refresh()
     if (antigravityRunner.enabled) antigravityRunner.refresh()
     if (cursorRunner.enabled) cursorRunner.refresh()
+  }
+
+  onActiveProviderIdsChanged: {
+    if (root.previewMode) return
+    root.activeProviderIds.forEach(function(id) { root.refresh(id) })
+  }
+
+  property Timer activeRefresh: Timer {
+    interval: 30000
+    repeat: true
+    running: !root.previewMode && root.activeProviderIds.length > 0
+    onTriggered: root.activeProviderIds.forEach(function(id) { root.refresh(id) })
   }
 
   function requestOfficialRefresh() {

@@ -15,6 +15,7 @@ Item {
   property bool animationsEnabled: true
   property string accentColor: "auto"
   property var providerColors: ({})
+  property var sessions: []
   property bool shown: false
   property real nowMs: Date.now()
   signal panelHovered(bool hovered)
@@ -31,8 +32,7 @@ Item {
   readonly property bool hasData: insights !== null && insights !== undefined
     && insights.available === true && Number(totals.last7dTokens) > 0
   readonly property var current: insights && insights.currentModel ? insights.currentModel : null
-  readonly property bool recentlyActive: current !== null
-    && root.nowMs - new Date(String(current.lastSeen)).getTime() < 15 * 60000
+  readonly property bool recentlyActive: root.sessions.some(function(s) { return s.state === "busy" })
   readonly property var series: {
     var out = []
     var hourly = insights && Array.isArray(insights.hourly) ? insights.hourly : []

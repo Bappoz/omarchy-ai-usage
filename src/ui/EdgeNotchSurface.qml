@@ -8,8 +8,9 @@ Item {
   id: root
 
   property string edge: "right"
+  property real uiScale: 1
 
-  readonly property real designScale: 44 / 117
+  readonly property real designScale: (44 / 117) * uiScale
   readonly property real wantedCurl: 103 * designScale
   readonly property real wantedCorner: 78.8 * designScale
 

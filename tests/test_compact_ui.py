@@ -115,11 +115,13 @@ class CompactUiTests(unittest.TestCase):
         self.assertIn("var currentSnapshots = Array.isArray(root.snapshots)", window)
         self.assertIn('"id": String(current.providerId || "")', window)
 
-    def test_settings_icon_is_a_local_vector_not_an_emoji(self) -> None:
+    def test_settings_control_is_global_and_uses_local_gear(self) -> None:
         card = (ROOT / "src" / "ui" / "ExpandedCard.qml").read_text()
-        icon = ROOT / "src" / "assets" / "icons" / "settings.svg"
+        orb = (ROOT / "src/ui/SettingsOrb.qml").read_text()
+        icon = ROOT / "src" / "assets" / "icons" / "gear.svg"
         self.assertTrue(icon.is_file())
-        self.assertIn('source: "../assets/icons/settings.svg"', card)
+        self.assertIn('source: "../assets/icons/gear.svg"', orb)
+        self.assertNotIn("settingsMouse", card)
         self.assertNotIn('"⚙"', card)
 
     def test_reference_glyphs_are_local_vector_assets(self) -> None:

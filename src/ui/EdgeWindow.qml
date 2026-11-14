@@ -53,7 +53,7 @@ PanelWindow {
   readonly property bool motionEnabled: preferences.animations !== false
     && Quickshell.env("OMARCHY_REDUCED_MOTION") !== "1"
   readonly property bool hoverExpansion: autoHide && expandBehavior === "hover"
-  readonly property bool unfolded: !autoHide || forcedOpen || heldOpen || settingsOpen || contextOpen || peekActive
+  readonly property bool unfolded: !autoHide || forcedOpen || heldOpen || settingsOpen || contextOpen || peekActive || notch.orbSettling
     || (hoverExpansion && (hoveringSurface || hoveringProvider || hoveringCard || hoveringPanel || hoveredIndex >= 0))
   readonly property bool showCard: settingsOpen || contextOpen
     || (hoveredIndex >= 0 && hoveredIndex < providers.length && unfolded)
@@ -277,6 +277,13 @@ PanelWindow {
       radius: Math.round(Math.min(width, height) / 2)
     }
     Region {
+      x: notch.x + notch.orbInputRect.x
+      y: notch.y + notch.orbInputRect.y
+      width: notch.orbVisible ? notch.orbInputRect.width : 0
+      height: notch.orbVisible ? notch.orbInputRect.height : 0
+      radius: Math.round(width / 2)
+    }
+    Region {
       x: expandedCard.x
       y: expandedCard.y
       width: root.showCard || expandedCard.opacity > 0 ? expandedCard.width : 0
@@ -378,8 +385,7 @@ PanelWindow {
     previewMode: root.previewMode
     uiScale: root.sizeScale
     animationsEnabled: root.motionEnabled
-    showProviderLabel: root.preferences.showProviderLabel === true
-    showPercentage: root.preferences.showPercentage !== false
+    settingsOpen: root.settingsOpen
     accentColor: String(root.preferences.accentColor || "auto")
     providerColors: root.preferences.providerColors || ({})
     sessions: root.preferences.showSessions === false ? [] : root.displaySessions
@@ -465,13 +471,6 @@ PanelWindow {
     preferences: root.preferences
     canOpenApp: root.activeProvider !== null && root.openableApps[String(root.activeProvider.id)] !== undefined
     onAppRequested: root.appRequested(String(root.activeProvider ? root.activeProvider.id : ""))
-    onSettingsRequested: {
-      root.openSettings()
-      if (root.settingsOpen) {
-        root.heldOpen = false
-        if (root.hoveredIndex < 0 && root.providers.length > 0) root.hoveredIndex = 0
-      }
-    }
     onPreferenceChanged: function(key, value) { root.preferenceChanged(key, value) }
     onSoundPreviewRequested: function(sound) { root.soundPreviewRequested(sound) }
     onSessionFocusRequested: function(session) { root.sessionFocusRequested(session) }

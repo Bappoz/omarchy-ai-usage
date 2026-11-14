@@ -56,8 +56,6 @@ Column {
       { key: "size", label: "Size", value: title(p.size || "medium") },
       { key: "openMode", label: "Open", value: openMode() },
       { key: "pollingInterval", label: "Refresh", value: Math.round(Number(p.pollingInterval || 900) / 60) + " min" },
-      { key: "showProviderLabel", label: "Provider label", value: p.showProviderLabel === true ? "On" : "Off" },
-      { key: "showPercentage", label: "Percentage", value: p.showPercentage === false ? "Off" : "On" },
       { key: "showResetTimer", label: "Reset time", value: p.showResetTimer === false ? "Off" : "On" },
       { key: "resetTimeStyle", label: "Reset display", value: p.resetTimeStyle === "date" ? "Reset date" : "Time remaining" },
       { key: "accentColor", label: "Accent color", value: Usage.validAccent(p.accentColor) === "auto" ? "Auto" : Usage.validAccent(p.accentColor).toUpperCase(), swatch: Usage.validAccent(p.accentColor) },

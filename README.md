@@ -108,13 +108,13 @@ omarchy plugin enable ai-usage.notch
 | Click a provider ring | Refresh that provider's usage |
 | Click the provider logo in the card | The provider's app opens |
 | Click a live session or event peek | Focus its owning application, when a process is known |
-| Click the settings orb or sliders icon | Preferences |
-| Right-click the notch | Keep open / Refresh now / Preferences |
+| Click the general settings orb outside the notch | Preferences |
+| Right-click the notch | Keep open / Refresh now |
 | Alt-drag the body | Move along the edge |
 
 ## Configure
 
-Use the settings orb or the sliders icon in a provider card. Choices apply live and are saved through Omarchy's scoped plugin API. Rows cycle values; position also has a slider, accent has a validated hex field, and Accounts has ordering buttons. All four providers are enabled automatically; the switches keep at least one provider enabled.
+Use the general settings orb outside the notch. Choices apply live and are saved through Omarchy's scoped plugin API. Rows cycle values; position also has a slider, accent has a validated hex field, and Accounts has ordering buttons. All four providers are enabled automatically; the switches keep at least one provider enabled.
 
 | Setting | Choices | Default | What it changes |
 | --- | --- | --- | --- |
@@ -126,7 +126,7 @@ Use the settings orb or the sliders icon in a provider card. Choices apply live 
 | Auto-hide | On, off | On | Whether an idle rail collapses to the edge pill |
 | Refresh interval | 5, 15, 30, 60 minutes | 15 minutes | Hidden fallback reread; a visible card requests fresh data every 30 seconds |
 | Claude / Codex / Antigravity / Cursor | On, off | On | Which live providers appear |
-| Provider label / percentage / reset time | On, off | Off / on / on | Compact-surface density |
+| Percentage / reset time | Percentage always shown; reset time on/off | On | CodeNotch compact readings |
 | Provider colors | Auto or preset per provider | Auto | Ring, quota bar, and activity chart colors |
 | Accent color | Auto, seven presets, any hex via `shell.json` | Auto | Global fallback color; provider colors override it |
 | Insights panel | On, off | On | The activity panel beside the card |

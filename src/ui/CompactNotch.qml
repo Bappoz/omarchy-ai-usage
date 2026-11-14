@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Shapes
 import "../model/Activity.js" as Activity
 
 Item {
@@ -12,8 +11,7 @@ Item {
   property bool previewMode: false
   property real uiScale: 1
   property bool animationsEnabled: true
-  property bool showProviderLabel: false
-  property bool showPercentage: true
+  property bool settingsOpen: false
   property string accentColor: "auto"
   property var providerColors: ({})
   property var sessions: []
@@ -59,14 +57,20 @@ Item {
   readonly property real drawnDepth: pillDepth + (fullDepth - pillDepth) * easedProgress
   readonly property real drawnLength: pillLength + (fullLength - pillLength) * easedProgress
 
-  implicitWidth: verticalEdge ? fullDepth : fullLength
-  implicitHeight: verticalEdge ? fullLength : fullDepth
+  readonly property real orbReach: 152 * designScale / 2
+  readonly property real orbCenterX: edge === "right" ? fullDepth - curl : (edge === "left" ? curl : fullLength)
+  readonly property real orbCenterY: verticalEdge ? fullLength : (edge === "top" ? curl : fullDepth - curl)
+  readonly property rect orbInputRect: Qt.rect(orbCenterX - orbReach, orbCenterY - orbReach, orbReach * 2, orbReach * 2)
+  readonly property bool orbVisible: orb.visible
+  readonly property bool orbSettling: orb.wake > 0.001
+  implicitWidth: verticalEdge ? fullDepth : fullLength + orbReach
+  implicitHeight: verticalEdge ? fullLength + orbReach : fullDepth
 
   readonly property real surfaceX: verticalEdge
     ? (edge === "right" ? width - drawnDepth : 0)
-    : (width - drawnLength) / 2
+    : (fullLength - drawnLength) / 2
   readonly property real surfaceY: verticalEdge
-    ? (height - drawnLength) / 2
+    ? (fullLength - drawnLength) / 2
     : (edge === "bottom" ? height - drawnDepth : 0)
   readonly property real surfaceWidth: verticalEdge ? drawnDepth : drawnLength
   readonly property real surfaceHeight: verticalEdge ? drawnLength : drawnDepth
@@ -201,15 +205,12 @@ Item {
           height: root.percentLineHeight
           horizontalAlignment: Text.AlignHCenter
           verticalAlignment: Text.AlignVCenter
-          visible: root.showProviderLabel || root.showPercentage
-          text: (root.showProviderLabel ? String(cell.modelData.displayName || "Provider") : "")
-            + (root.showProviderLabel && root.showPercentage ? " · " : "")
-            + (root.showPercentage ? (typeof cell.modelData.usedPercent === "number" ? Math.round(cell.modelData.usedPercent) + "%" : "—") : "")
+          text: typeof cell.modelData.usedPercent === "number" ? Math.round(cell.modelData.usedPercent) + "%" : "—"
           textFormat: Text.PlainText
           color: "#ffffff"
           opacity: cell.modelData.stale ? 0.45 : 1
           font.family: "sans-serif"
-          font.pixelSize: 9 * root.uiScale
+          font.pixelSize: (27 / 0.714) * root.designScale
           font.weight: Font.DemiBold
           font.letterSpacing: -0.15
         }
@@ -238,46 +239,17 @@ Item {
     }
   }
 
-  // CodeNotch's settings orb: a quiet arc at rest, a gear on hover.
-  Item {
+  SettingsOrb {
     id: orb
-    width: 24 * root.uiScale
-    height: width
-    x: root.verticalEdge ? (root.fullDepth - width) / 2 : root.fullLength - root.curl - width
-    y: root.verticalEdge ? root.fullLength - root.curl - height : (root.fullDepth - height) / 2
-    opacity: root.unfolded && root.openProgress >= 0.995 ? 1 : 0
-    visible: opacity > 0
-    Behavior on opacity { NumberAnimation { duration: root.animationsEnabled ? 200 : 0 } }
-    Shape {
-      anchors.fill: parent
-      visible: !orbMouse.containsMouse
-      preferredRendererType: Shape.CurveRenderer
-      ShapePath {
-        strokeWidth: 1.5 * root.uiScale; strokeColor: "#808080"; fillColor: "transparent"
-        capStyle: ShapePath.RoundCap
-        PathAngleArc {
-          centerX: orb.width / 2; centerY: orb.height / 2
-          radiusX: orb.width * 0.26; radiusY: orb.height * 0.26
-          startAngle: 25; sweepAngle: 130
-        }
-      }
-    }
-    Image {
-      anchors.centerIn: parent
-      width: 14 * root.uiScale; height: width
-      source: "../assets/icons/settings.svg"
-      visible: orbMouse.containsMouse
-    }
-    MouseArea {
-      id: orbMouse
-      anchors.fill: parent
-      hoverEnabled: true
-      cursorShape: Qt.PointingHandCursor
-      onContainsMouseChanged: root.surfaceHovered(containsMouse)
-      onClicked: root.settingsRequested()
-    }
-    Accessible.role: Accessible.Button
-    Accessible.name: "Open preferences"
-    Accessible.onPressAction: root.settingsRequested()
+    x: root.orbCenterX - width / 2
+    y: root.orbCenterY - height / 2
+    z: 3
+    edge: root.edge
+    uiScale: root.uiScale
+    animationsEnabled: root.animationsEnabled
+    revealed: root.unfolded && root.openProgress >= 0.995
+    selected: root.settingsOpen
+    onHoverChanged: function(value) { root.surfaceHovered(value) }
+    onActivated: root.settingsRequested()
   }
 }

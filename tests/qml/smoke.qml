@@ -34,6 +34,7 @@ ShellRoot {
       preferences: prefs.values
       onPreferenceChanged: function(key, value) { prefs.update(key, value) }
     }
+    UI.SettingsOrb { id: orb; x: 600; y: 500; revealed: true; animationsEnabled: false }
     UI.CompactNotch {
       id: rail
       x: 800; y: 50; width: implicitWidth; height: implicitHeight
@@ -46,6 +47,14 @@ ShellRoot {
       interval: 500; running: true
       onTriggered: {
         try {
+          prefs.values = prefs.sanitize({showProviderLabel:true,showPercentage:false})
+          window.check(!prefs.values.showProviderLabel && prefs.values.showPercentage, "old preferences hid percentages")
+          window.check(rail.orbCenterY === rail.fullLength, "settings orb is inside the rail")
+          window.check(rail.orbInputRect.y + rail.orbInputRect.height <= rail.height, "orb exceeds input extent")
+          orb.hovered = true
+          window.check(orb.wake === 1 && orb.pathData().length > 0, "hover morph failed")
+          orb.hovered = false
+          window.check(orb.wake === 0, "orb did not return to arc")
           prefs.values = prefs.defaults()
           settings.activate("peekDuration")
           window.check(prefs.values.peekDuration === 10, "peek duration did not persist")

@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Shapes
+import "NotchGeometry.js" as Geometry
 
 // The canonical right-edge outline and its measurements are adapted from
 // CodeNotch's MIT-licensed SideNotchShape at revision ec1a7e3. The shape is
@@ -35,8 +36,6 @@ Item {
     var k = 0.5522847498
 
     var start = root.point(depth, 0, depth)
-    var flareTop1 = root.point(depth, k * curl, depth)
-    var flareTop2 = root.point(depth - curl + k * curl, curl, depth)
     var flareTopEnd = root.point(depth - curl, curl, depth)
     var cornerTopStart = root.point(corner, curl, depth)
     var cornerTop1 = root.point(corner - k * corner, curl, depth)
@@ -47,18 +46,22 @@ Item {
     var cornerBottom2 = root.point(corner - k * corner, bodyBottom, depth)
     var cornerBottomEnd = root.point(corner, bodyBottom, depth)
     var flareBottomStart = root.point(depth - curl, bodyBottom, depth)
-    var flareBottom1 = root.point(depth - curl + k * curl, bodyBottom, depth)
-    var flareBottom2 = root.point(depth, length - k * curl, depth)
-    var flareBottomEnd = root.point(depth, length, depth)
+    var topFlare = ""
+    var bottomFlare = ""
+    for (var i = 1; i < Geometry.FLARE.length; i++) {
+      var q = Geometry.FLARE[i]
+      topFlare += " L " + root.pair(root.point(depth - curl * q.u, curl * q.v, depth))
+      bottomFlare += " L " + root.pair(root.point(depth - curl + curl * q.v, bodyBottom + curl * q.u, depth))
+    }
 
     return "M " + root.pair(start)
-      + " C " + root.pair(flareTop1) + " " + root.pair(flareTop2) + " " + root.pair(flareTopEnd)
+      + topFlare
       + " L " + root.pair(cornerTopStart)
       + " C " + root.pair(cornerTop1) + " " + root.pair(cornerTop2) + " " + root.pair(cornerTopEnd)
       + " L " + root.pair(cornerBottomStart)
       + " C " + root.pair(cornerBottom1) + " " + root.pair(cornerBottom2) + " " + root.pair(cornerBottomEnd)
       + " L " + root.pair(flareBottomStart)
-      + " C " + root.pair(flareBottom1) + " " + root.pair(flareBottom2) + " " + root.pair(flareBottomEnd)
+      + bottomFlare
       + " Z"
   }
 

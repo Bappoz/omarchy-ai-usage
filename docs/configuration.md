@@ -48,7 +48,7 @@ The in-card settings control covers the common choices. The normalized configura
 - `autoHide`: when true, the full rail collapses back to its edge pill.
 - `expandBehavior`: `hover` or `click`. With `autoHide: false`, the provider rail remains open.
 - `pollingInterval`: seconds, clamped to 60–3600; the UI offers 5, 15, 30, and 60 minutes. This is the hidden fallback reread. A visible card asks `omarchy.agents` for fresh records when opened and every 30 seconds, with a 15-second request cooldown.
-- `showProviderLabel`, `showPercentage`, `showResetTimer`, `animations`: boolean presentation choices. New configurations show percentages below the rings. Explicit existing label/color choices are preserved.
+- The compact rail always shows percentages, never provider names. Legacy `showProviderLabel` / `showPercentage` values normalize to false/true, including old installations. `showResetTimer` and `animations` remain boolean presentation choices.
 - `accentColor`: `auto` (green/yellow/orange by usage) or any `#RRGGBB` hex, used when a provider has no specific color. Provider colors override it. General settings offers presets and a validated hex input. Invalid values fall back to `auto`.
 - `showInsights`: show the activity panel beside an open provider card. It reads aggregates of local session logs only while visible; see `SECURITY.md`.
 - `enabledProviders.claude`, `codex`, `antigravity`, and `cursor`: provider switches also exposed in the card. The UI keeps at least one enabled.

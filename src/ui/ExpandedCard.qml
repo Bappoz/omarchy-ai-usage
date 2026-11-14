@@ -29,7 +29,6 @@ Item {
   property real nowMs: Date.now()
   property var preferences: ({})
   signal cardHovered(bool hovered)
-  signal settingsRequested()
   signal appRequested()
   signal preferenceChanged(string key, var value)
   signal sessionFocusRequested(var session)
@@ -208,7 +207,7 @@ Item {
 
       Text {
         Layout.fillWidth: true
-        text: root.providerName + " Usage"
+        text: root.settingsOpen ? "Preferences" : root.providerName + " Usage"
         textFormat: Text.PlainText
         color: "#ffffff"
         elide: Text.ElideRight
@@ -216,42 +215,6 @@ Item {
         font.pixelSize: 14 * root.uiScale
         font.weight: Font.DemiBold
         font.letterSpacing: -0.15
-      }
-
-      Rectangle {
-        Layout.preferredWidth: 24 * root.uiScale
-        Layout.preferredHeight: 24 * root.uiScale
-        radius: 8 * root.uiScale
-        color: settingsMouse.containsMouse || root.settingsOpen ? "#202020" : "transparent"
-
-        Image {
-          anchors.centerIn: parent
-          width: 14 * root.uiScale
-          height: 14 * root.uiScale
-          source: "../assets/icons/settings.svg"
-          sourceSize.width: Math.round(width * 2)
-          sourceSize.height: Math.round(height * 2)
-          opacity: settingsMouse.containsMouse || root.settingsOpen ? 1 : 0.62
-          rotation: root.settingsOpen ? 90 : 0
-          Behavior on rotation {
-            NumberAnimation { duration: root.animationsEnabled ? 180 : 0; easing.type: Easing.OutCubic }
-          }
-          Behavior on opacity {
-            NumberAnimation { duration: root.animationsEnabled ? 120 : 0 }
-          }
-        }
-
-        MouseArea {
-          id: settingsMouse
-          anchors.fill: parent
-          hoverEnabled: true
-          cursorShape: Qt.PointingHandCursor
-          onClicked: root.settingsRequested()
-        }
-
-        Accessible.role: Accessible.Button
-        Accessible.name: root.settingsOpen ? "Close preferences" : "Open preferences"
-        Accessible.onPressAction: root.settingsRequested()
       }
 
       Rectangle {
@@ -430,7 +393,7 @@ Item {
       visible: root.contextOpen
       spacing: 4 * root.uiScale
       Repeater {
-        model: [root.heldOpen ? "Release keep open" : "Keep open", "Refresh now", "Preferences"]
+        model: [root.heldOpen ? "Release keep open" : "Keep open", "Refresh now"]
         delegate: Rectangle {
           required property string modelData
           required property int index
@@ -449,7 +412,6 @@ Item {
             onClicked: {
               if (parent.index === 0) root.pinRequested()
               else if (parent.index === 1) root.refreshRequested()
-              else root.settingsRequested()
             }
           }
           Accessible.role: Accessible.Button

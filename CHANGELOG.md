@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Remove settings controls from individual provider cards; use one general settings orb outside the trailing flare. Morph the black arc into the black gear disc on hover and reverse on leave, with click rotation and a dedicated input region.
+- Always show percentages on compact cells, overriding legacy name/hidden-percent preferences, and restore CodeNotch cap-height proportions.
+- Share a curvature-ramped flare between the notch silhouette and its parallel settings arc; reserve room for the external orb on all four edges.
+
 ## 0.12.0
 
 - Port CodeNotch session interaction: a white working arc (or optional breathing disc), amber waiting ring, completion state, per-session details and a configurable 3/5/10-second peek. Claude uses its process registry with a cached transcript fallback; Codex uses cached bounded rollout tails and live process descriptors.

@@ -4,6 +4,8 @@
 Claude publishes a pid registry. Codex lifecycle events are read from bounded,
 cached rollout tails, with open descriptors keeping long-running turns live.
 Only same-user processes are inspected. No hooks, logins or inference are run.
+Sessions living in the home of a paused Orca bot are hidden; Orca's own
+``bot list --json`` is the only source of the paused state.
 """
 
 from __future__ import annotations
@@ -13,10 +15,12 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import signal
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +28,10 @@ MAX_SESSIONS = 64
 TAIL_BYTES = 1024 * 1024
 HEAD_BYTES = 32 * 1024
 CONTROL = re.compile(r"[\x00-\x1f\x7f-\x9f]")
+ORCA_BOTS_TTL = 10
+ORCA_FAILURE_TTL = 30
+ORCA_TIMEOUT_SECONDS = 5
+MAX_ORCA_OUTPUT = 1024 * 1024
 SENSITIVE = re.compile(r"(?:bearer\s+\S+|sk-[\w-]{12,}|[\w.+-]+@[\w.-]+\.[a-z]{2,})", re.IGNORECASE)
 
 
@@ -57,6 +65,77 @@ def regular_json(path: Path) -> dict[str, Any] | None:
         return value if isinstance(value, dict) else None
     except (OSError, ValueError):
         return None
+
+
+def orca_commands() -> list[list[str]]:
+    commands: list[list[str]] = []
+    installed = shutil.which("orca-ide")
+    if installed:
+        commands.append([installed])
+    # The app-scoped shim only: bare `orca` is the GNOME screen reader on Linux.
+    shim = Path.home() / ".config/orca/linux-orca-cli-shim/orca"
+    if shim.is_file() and os.access(shim, os.X_OK):
+        commands.append([str(shim)])
+    return commands
+
+
+def orca_paused_ids() -> set[str] | None:
+    """Ids of paused Orca bots, or None when Orca cannot answer (hide nothing)."""
+    for command in orca_commands():
+        try:
+            done = subprocess.run([*command, "bot", "list", "--json"], stdin=subprocess.DEVNULL,
+                                  stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                  timeout=ORCA_TIMEOUT_SECONDS, check=False, shell=False)
+            if done.returncode != 0 or len(done.stdout) > MAX_ORCA_OUTPUT:
+                continue
+            result = json.loads(done.stdout).get("result")
+            bots = result.get("bots") if isinstance(result, dict) else None
+        except (OSError, subprocess.SubprocessError, ValueError, AttributeError):
+            continue
+        if isinstance(bots, list):
+            return {bot["id"] for bot in bots
+                    if isinstance(bot, dict) and bot.get("paused") is True and isinstance(bot.get("id"), str)}
+    return None
+
+
+class OrcaBots:
+    """Map a session cwd under ``~/.orca/bots/<home>`` to its bot and its paused state.
+
+    The bot's home folder is the link: Orca starts each bot's agent there and
+    keeps the bot id in ``<home>/bot.json``. Orca is queried lazily (only when a
+    session lives in a bot home) and at most once per TTL, since the CLI is slow.
+    """
+
+    def __init__(self, root: Path | None = None, *, fetch: Callable[[], set[str] | None] = orca_paused_ids,
+                 clock: Callable[[], float] = time.monotonic) -> None:
+        self.root = root if root is not None else Path.home() / ".orca" / "bots"
+        self.fetch, self.clock = fetch, clock
+        self.paused: set[str] | None = None
+        self.expires = float("-inf")
+
+    def home_of(self, cwd: object) -> Path | None:
+        if not isinstance(cwd, str) or not cwd.startswith("/"):
+            return None
+        try:
+            parts = Path(os.path.normpath(cwd)).relative_to(self.root).parts
+        except ValueError:
+            return None
+        return self.root / parts[0] if parts else None
+
+    def paused_ids(self) -> set[str] | None:
+        now = self.clock()
+        if now >= self.expires:
+            self.paused = self.fetch()
+            self.expires = now + (ORCA_BOTS_TTL if self.paused is not None else ORCA_FAILURE_TTL)
+        return self.paused
+
+    def hides(self, cwd: object) -> bool:
+        home = self.home_of(cwd)
+        if home is None:
+            return False
+        record = regular_json(home / "bot.json")
+        bot_id = record.get("id") if record else None
+        return isinstance(bot_id, str) and bot_id in (self.paused_ids() or ())
 
 
 def session(provider: str, key: str, state: str, name: str, detail: str,
@@ -123,7 +202,8 @@ class ClaudeTranscripts:
 
 
 def claude_sessions(config: Path, proc: Path = Path("/proc"),
-                    transcripts: ClaudeTranscripts | None = None) -> list[dict[str, Any]]:
+                    transcripts: ClaudeTranscripts | None = None,
+                    bots: OrcaBots | None = None) -> list[dict[str, Any]]:
     found: dict[str, dict[str, Any]] = {}
     directory = config / "sessions"
     try:
@@ -134,6 +214,8 @@ def claude_sessions(config: Path, proc: Path = Path("/proc"),
         record = regular_json(path)
         pid = record.get("pid") if record else None
         if not isinstance(pid, int) or isinstance(pid, bool) or not isinstance(record.get("cwd"), str):
+            continue
+        if bots and bots.hides(record["cwd"]):
             continue
         info = process_info(pid, proc)
         if info is None:
@@ -263,7 +345,8 @@ class RolloutReader:
             return None
 
     def collect(self, root: Path, *, now: float | None = None,
-                opened: dict[Path, tuple[int, str]] | None = None) -> list[dict[str, Any]]:
+                opened: dict[Path, tuple[int, str]] | None = None,
+                bots: OrcaBots | None = None) -> list[dict[str, Any]]:
         now = time.time() if now is None else now
         opened = open_rollouts(root) if opened is None else opened
         candidates = set(opened)
@@ -287,6 +370,8 @@ class RolloutReader:
             # A sub-agent completing is not its parent conversation completing.
             source = meta.get("source")
             if isinstance(source, dict) and "subagent" in source:
+                continue
+            if bots and bots.hides(meta.get("cwd")):
                 continue
             pid, started = opened.get(path, (None, None))
             if path not in opened and state in {"busy", "unknown"}:
@@ -349,6 +434,7 @@ def main() -> int:
         parser.error("unsupported provider")
     reader = RolloutReader()
     transcripts = ClaudeTranscripts()
+    bots = OrcaBots()
     claude = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
     codex = Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex") / "sessions"
     previous = ""
@@ -356,9 +442,9 @@ def main() -> int:
     while True:
         sessions = []
         if "claude" in providers:
-            sessions.extend(claude_sessions(claude, transcripts=transcripts))
+            sessions.extend(claude_sessions(claude, transcripts=transcripts, bots=bots))
         if "codex" in providers:
-            sessions.extend(reader.collect(codex))
+            sessions.extend(reader.collect(codex, bots=bots))
         doc = json.dumps({"schemaVersion": 1, "sessions": sessions}, separators=(",", ":"))
         if doc != previous:
             print(doc, flush=True)

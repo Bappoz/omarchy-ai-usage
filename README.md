@@ -171,6 +171,7 @@ For an exact connector or a continuous position, edit the plugin entry in `~/.co
 | Orca `account list --json` | Antigravity and Cursor quota windows | Local CLI output is normalized in memory; only quota percentages, reset times and plan labels reach the UI |
 | Local session logs (`~/.claude/projects`, `~/.codex/sessions`) | Activity panel | Read-only, only while the panel is visible, aggregated in a helper; can be turned off |
 | Claude session registry, bounded Claude/Codex log tails, same-user `/proc` metadata | Live sessions and event peeks | One shared local watcher, two-second cadence, unchanged tails cached; disable with `showSessions: false` |
+| Orca `bot list --json` and `~/.orca/bots/<name>/bot.json` | Hide sessions of paused Orca bots | Queried only when a session runs inside an Orca bot home, cached 10 seconds; if Orca is unavailable nothing is hidden |
 | `hyprctl clients -j` and validated ancestor pid | Focus a session | Only on a session/peek click; no command-line, prompt or terminal-content collection |
 | Freedesktop notifications and sound events | Quota/session alerts | Optional notifications; independent sounds; missing services fail quietly |
 | `gtk-launch` / `omarchy-launch-webapp` | Opening the app on logo click | Fixed commands, no user-controlled arguments |

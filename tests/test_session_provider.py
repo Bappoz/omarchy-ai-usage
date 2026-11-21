@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import tempfile
 import time
 import unittest
@@ -139,6 +140,122 @@ class SessionProviderTests(unittest.TestCase):
             run.return_value.stdout = json.dumps(clients).encode()
             self.assertTrue(sp.focus_session(123, "90"))
             self.assertEqual(run.call_args_list[1].args[0], ["hyprctl", "dispatch", "focuswindow", "address:0x123abc"])
+
+    def bot_home(self, name: str, bot_id: str | None) -> str:
+        home = self.root / ".orca/bots" / name
+        home.mkdir(parents=True)
+        if bot_id is not None:
+            (home / "bot.json").write_text(json.dumps({"id": bot_id, "name": name.title()}))
+        return str(home)
+
+    def bots(self, paused: set[str] | None, clock: list[float] | None = None) -> tuple[sp.OrcaBots, list[int]]:
+        calls: list[int] = []
+
+        def fetch() -> set[str] | None:
+            calls.append(1)
+            return paused
+
+        ticks = clock if clock is not None else [0.0]
+        return sp.OrcaBots(self.root / ".orca/bots", fetch=fetch, clock=lambda: ticks[0]), calls
+
+    def test_paused_orca_bot_session_is_hidden_and_others_are_kept(self) -> None:
+        paused = self.bot_home("atelier", "id-paused")
+        active = self.bot_home("maestro", "id-active")
+        self.write("sessions/a.json", {"pid": 1, "cwd": paused, "name": "Home", "status": "idle", "entrypoint": "orca"})
+        self.write("sessions/b.json", {"pid": 2, "cwd": active, "name": "Home", "status": "idle", "entrypoint": "orca"})
+        self.write("sessions/c.json", {"pid": 3, "cwd": "/example/project", "name": "Work", "status": "busy"})
+        bots, _ = self.bots({"id-paused"})
+        with patch.object(sp, "process_info", return_value=(1, "90")):
+            found = sp.claude_sessions(self.root, bots=bots)
+        self.assertEqual(sorted(item["pid"] for item in found), [2, 3])
+
+    def test_bot_session_returns_once_the_bot_is_no_longer_paused(self) -> None:
+        home = self.bot_home("atelier", "id-1")
+        self.write("sessions/a.json", {"pid": 1, "cwd": home, "name": "Home", "status": "idle"})
+        state: dict[str, set[str] | None] = {"paused": {"id-1"}}
+        clock = [0.0]
+        bots = sp.OrcaBots(self.root / ".orca/bots", fetch=lambda: state["paused"], clock=lambda: clock[0])
+        with patch.object(sp, "process_info", return_value=(1, "90")):
+            self.assertEqual(sp.claude_sessions(self.root, bots=bots), [])
+            state["paused"] = set()
+            self.assertEqual(sp.claude_sessions(self.root, bots=bots), [])  # still inside the cache window
+            clock[0] += sp.ORCA_BOTS_TTL + 1
+            self.assertEqual(len(sp.claude_sessions(self.root, bots=bots)), 1)
+
+    def test_orca_is_not_queried_without_a_bot_session(self) -> None:
+        self.bot_home("atelier", "id-1")
+        self.write("sessions/c.json", {"pid": 3, "cwd": "/example/project", "status": "busy"})
+        bots, calls = self.bots({"id-1"})
+        with patch.object(sp, "process_info", return_value=(1, "90")):
+            self.assertEqual(len(sp.claude_sessions(self.root, bots=bots)), 1)
+        self.assertEqual(calls, [])
+
+    def test_orca_query_is_cached_across_polls(self) -> None:
+        home = self.bot_home("atelier", "id-1")
+        self.write("sessions/a.json", {"pid": 1, "cwd": home, "status": "idle"})
+        bots, calls = self.bots({"id-1"})
+        with patch.object(sp, "process_info", return_value=(1, "90")):
+            for _ in range(3):
+                sp.claude_sessions(self.root, bots=bots)
+        self.assertEqual(len(calls), 1)
+
+    def test_unavailable_orca_hides_nothing(self) -> None:
+        home = self.bot_home("atelier", "id-1")
+        self.write("sessions/a.json", {"pid": 1, "cwd": home, "status": "idle"})
+        bots, _ = self.bots(None)
+        with patch.object(sp, "process_info", return_value=(1, "90")):
+            self.assertEqual(len(sp.claude_sessions(self.root, bots=bots)), 1)
+
+    def test_bot_home_without_readable_identity_is_not_hidden(self) -> None:
+        missing = self.bot_home("atelier", None)
+        self.write("sessions/a.json", {"pid": 1, "cwd": missing, "status": "idle"})
+        bots, _ = self.bots({"id-1"})
+        with patch.object(sp, "process_info", return_value=(1, "90")):
+            self.assertEqual(len(sp.claude_sessions(self.root, bots=bots)), 1)
+
+    def test_path_escaping_the_bot_root_is_not_a_bot(self) -> None:
+        home = self.bot_home("atelier", "id-1")
+        bots, _ = self.bots({"id-1"})
+        self.assertTrue(bots.hides(home + "/subdir"))
+        self.assertFalse(bots.hides(home + "/../../../elsewhere"))
+        self.assertFalse(bots.hides(str(self.root / ".orca/bots")))
+
+    def test_paused_bot_codex_rollout_is_hidden(self) -> None:
+        home = self.bot_home("atelier", "id-1")
+        path = self.root / "rollout.jsonl"
+        meta = {"type": "session_meta", "payload": {"id": "s", "cwd": home, "source": "cli"}}
+        path.write_text(json.dumps(meta) + "\n" + json.dumps({"type": "event_msg", "payload": {"type": "task_started"}}) + "\n")
+        bots, _ = self.bots({"id-1"})
+        found = sp.RolloutReader().collect(self.root, now=time.time(), opened={path: (123, "90")}, bots=bots)
+        self.assertEqual(found, [])
+
+    def test_orca_paused_ids_parse_cli_json(self) -> None:
+        payload = {"ok": True, "result": {"bots": [
+            {"id": "a", "paused": True}, {"id": "b", "paused": False}, {"id": 7, "paused": True}, "junk"]}}
+        done = subprocess.CompletedProcess([], 0, stdout=json.dumps(payload).encode())
+        with patch.object(sp, "orca_commands", return_value=[["orca-cli"]]), \
+                patch.object(sp.subprocess, "run", return_value=done) as run:
+            self.assertEqual(sp.orca_paused_ids(), {"a"})
+        self.assertEqual(run.call_args.args[0], ["orca-cli", "bot", "list", "--json"])
+        self.assertIs(run.call_args.kwargs.get("shell", False), False)
+
+    def test_orca_paused_ids_is_none_on_any_failure(self) -> None:
+        good = json.dumps({"result": {"bots": []}}).encode()
+        cases = [
+            ("no cli", [], None),
+            ("exit 1", [["x"]], subprocess.CompletedProcess([], 1, stdout=good)),
+            ("bad json", [["x"]], subprocess.CompletedProcess([], 0, stdout=b"{nope")),
+            ("wrong shape", [["x"]], subprocess.CompletedProcess([], 0, stdout=b"[]")),
+            ("no bots key", [["x"]], subprocess.CompletedProcess([], 0, stdout=b'{"result":{}}')),
+            ("oversized", [["x"]], subprocess.CompletedProcess([], 0, stdout=b" " * (sp.MAX_ORCA_OUTPUT + 1))),
+            ("timeout", [["x"]], subprocess.TimeoutExpired("x", 1)),
+            ("oserror", [["x"]], OSError("gone")),
+        ]
+        for name, commands, outcome in cases:
+            with self.subTest(name), patch.object(sp, "orca_commands", return_value=commands), \
+                    patch.object(sp.subprocess, "run", side_effect=[outcome] if isinstance(outcome, BaseException) else None,
+                                 return_value=outcome):
+                self.assertIsNone(sp.orca_paused_ids())
 
     def test_labels_strip_control_characters_and_sensitive_values(self) -> None:
         text = sp.label("Build\n\x1b test@example.org /home/example/private sk-abcdefghijklmnop")

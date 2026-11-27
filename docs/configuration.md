@@ -13,6 +13,7 @@ The in-card settings control covers the common choices. The normalized configura
   "monitor": "focused",
   "size": "medium",
   "autoHide": true,
+  "autoHideMode": "onFullscreen",
   "expandBehavior": "hover",
   "pollingInterval": 900,
   "showProviderLabel": false,
@@ -20,6 +21,8 @@ The in-card settings control covers the common choices. The normalized configura
   "showResetTimer": true,
   "animations": true,
   "accentColor": "auto",
+  "colorTransitionStyle": "hardStep",
+  "surfaceOpacity": 1.0,
   "showInsights": true,
   "showSessions": true,
   "busyIndicator": "arc",
@@ -46,6 +49,9 @@ The in-card settings control covers the common choices. The normalized configura
 - `monitor`: `focused`, `all`, or an exact live connector name. A missing connector temporarily falls back to the focused display and is restored when it reconnects.
 - `size`: `small`, `medium`, or `large`.
 - `autoHide`: when true, the full rail collapses back to its edge pill.
+- `autoHideMode`: `onFullscreen` (default), `onOverlap`, or `never`. With `onFullscreen` the pill tucks further into the edge while a true full-screen window is focused on that display; `onOverlap` also folds when the focused window covers the notch. Hovering, Keep open, settings and event peeks always win. `never` stops the Hyprland watcher.
+- `surfaceOpacity`: `0.72`–`1.0`; the settings row cycles Solid black (`1.0`), Dark glass (`0.88`) and Tinted (`0.78`). Applies to the notch, card, tail, orb and activity panel.
+- `colorTransitionStyle`: `hardStep` (green/yellow/orange at 50% and 70%) or `ramp` (continuous blend, yellow at 55%, red from 90%). Ignored when a provider or global accent color is set.
 - `expandBehavior`: `hover` or `click`. With `autoHide: false`, the provider rail remains open.
 - `pollingInterval`: seconds, clamped to 60–3600; the UI offers 5, 15, 30, and 60 minutes. This is the hidden fallback reread. A visible card asks `omarchy.agents` for fresh records when opened and every 30 seconds, with a 15-second request cooldown.
 - The compact rail always shows percentages, never provider names. Legacy `showProviderLabel` / `showPercentage` values normalize to false/true, including old installations. `showResetTimer` and `animations` remain boolean presentation choices.

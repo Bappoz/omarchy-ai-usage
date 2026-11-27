@@ -10,6 +10,8 @@ Item {
 
   property string edge: "right"
   property real uiScale: 1
+  property real surfaceOpacity: 1.0
+  property bool animationsEnabled: true
 
   readonly property real designScale: (44 / 117) * uiScale
   readonly property real wantedCurl: 103 * designScale
@@ -71,7 +73,8 @@ Item {
 
     ShapePath {
       strokeWidth: -1
-      fillColor: "#000000"
+      fillColor: root.surfaceOpacity >= 0.999 ? "#000000" : Qt.rgba(0, 0, 0, Math.max(0.5, Math.min(1, root.surfaceOpacity)))
+      Behavior on fillColor { ColorAnimation { duration: root.animationsEnabled ? 220 : 0 } }
       PathSvg { path: root.pathData() }
     }
   }

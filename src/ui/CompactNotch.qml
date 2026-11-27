@@ -14,6 +14,9 @@ Item {
   property bool settingsOpen: false
   property string accentColor: "auto"
   property var providerColors: ({})
+  property string colorTransitionStyle: "hardStep"
+  property real surfaceOpacity: 1.0
+  property bool suppressed: false
   property var sessions: []
   property string busyIndicator: "arc"
   property real dragStart: 0
@@ -53,9 +56,13 @@ Item {
   readonly property real pillLength: 210 * designScale
 
   property real openProgress: unfolded ? 1 : 0
-  readonly property real easedProgress: Math.max(0, Math.min(1, openProgress))
-  readonly property real drawnDepth: pillDepth + (fullDepth - pillDepth) * easedProgress
-  readonly property real drawnLength: pillLength + (fullLength - pillLength) * easedProgress
+  property real retractProgress: suppressed && !unfolded ? 1 : 0
+  // Allow subtle liquid spring overshoot (NotchMotion.unfold) rather than clipping it flat.
+  readonly property real easedProgress: Math.max(0, Math.min(1.04, openProgress))
+  readonly property real restedDepth: Math.max(2, pillDepth * (1 - retractProgress * 0.85))
+  readonly property real restedLength: pillLength * (1 - retractProgress * 0.35)
+  readonly property real drawnDepth: restedDepth + (fullDepth - restedDepth) * easedProgress
+  readonly property real drawnLength: restedLength + (fullLength - restedLength) * easedProgress
 
   readonly property real orbReach: 152 * designScale / 2
   readonly property real orbCenterX: edge === "right" ? fullDepth - curl : (edge === "left" ? curl : fullLength)
@@ -92,7 +99,12 @@ Item {
 
   Behavior on openProgress {
     enabled: root.animationsEnabled
-    SpringAnimation { spring: 3.8; damping: 0.38; epsilon: 0.001 }
+    SpringAnimation { spring: 3.4; damping: 0.34; epsilon: 0.001 }
+  }
+
+  Behavior on retractProgress {
+    enabled: root.animationsEnabled
+    SpringAnimation { spring: 3.4; damping: 0.45; epsilon: 0.001 }
   }
 
   EdgeNotchSurface {
@@ -101,8 +113,11 @@ Item {
     y: root.surfaceY
     width: root.surfaceWidth
     height: root.surfaceHeight
+    opacity: 1 - root.retractProgress * 0.88
     edge: root.edge
     uiScale: root.uiScale
+    surfaceOpacity: root.surfaceOpacity
+    animationsEnabled: root.animationsEnabled
   }
 
   MouseArea {
@@ -194,6 +209,7 @@ Item {
           uiScale: root.uiScale
           accentColor: root.accentColor
           providerColor: String((root.providerColors || ({}))[String(cell.modelData.id || "")] || "auto")
+          colorTransitionStyle: root.colorTransitionStyle
           accessibleName: String(cell.modelData.displayName || "Provider") + " usage"
           activityState: Activity.summary(root.sessions, String(cell.modelData.id)).state
           busyIndicator: root.busyIndicator
@@ -246,6 +262,7 @@ Item {
     z: 3
     edge: root.edge
     uiScale: root.uiScale
+    surfaceOpacity: root.surfaceOpacity
     animationsEnabled: root.animationsEnabled
     revealed: root.unfolded && root.openProgress >= 0.995
     selected: root.settingsOpen

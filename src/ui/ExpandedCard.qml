@@ -25,6 +25,8 @@ Item {
   property real maxBodyHeight: 900
   property string accentColor: "auto"
   property var providerColors: ({})
+  property string colorTransitionStyle: "hardStep"
+  property real surfaceOpacity: 1.0
   property bool canOpenApp: false
   property real nowMs: Date.now()
   property var preferences: ({})
@@ -50,6 +52,9 @@ Item {
   readonly property real barToUsed: 17.8 * designScale
   readonly property real blockSpacing: 20 * designScale
   readonly property real bodyHeight: Math.min(maxBodyHeight, content.implicitHeight + 2 * cardPadding)
+  property real animatedBodyHeight: bodyHeight
+  property real animatedTailCenter: tailCenter
+  readonly property color surfaceColor: root.surfaceOpacity >= 0.999 ? "#000000" : Qt.rgba(0, 0, 0, Math.max(0.5, Math.min(1, root.surfaceOpacity)))
   readonly property real bodyX: edge === "left" ? tailLength : 0
   readonly property real bodyY: edge === "top" ? tailLength : 0
   readonly property var windows: snapshot && Array.isArray(snapshot.windows)
@@ -63,7 +68,16 @@ Item {
     : "Codex"
 
   implicitWidth: horizontalEdge ? bodyWidth : bodyWidth + tailLength
-  implicitHeight: horizontalEdge ? bodyHeight + tailLength : bodyHeight
+  implicitHeight: horizontalEdge ? animatedBodyHeight + tailLength : animatedBodyHeight
+
+  Behavior on animatedBodyHeight {
+    enabled: root.animationsEnabled
+    SpringAnimation { spring: 4.2; damping: 0.54; epsilon: 0.25 }
+  }
+  Behavior on animatedTailCenter {
+    enabled: root.animationsEnabled
+    SpringAnimation { spring: 3.8; damping: 0.52; epsilon: 0.1 }
+  }
 
   readonly property color badgeColor: status === "RATE_LIMITED" || status === "ERROR" || status === "NEEDS_AUTH"
     ? "#ff3f00"
@@ -85,7 +99,7 @@ Item {
 
   function usageColor(used) {
     var colors = root.providerColors || ({})
-    return Usage.usageColor(used, root.accentColor, colors[root.providerId])
+    return Usage.usageColor(used, root.accentColor, colors[root.providerId], root.colorTransitionStyle)
   }
 
   function toneColor(tone) {
@@ -132,18 +146,19 @@ Item {
     x: root.edge === "left" ? 0
       : (root.edge === "right"
         ? root.bodyWidth - 1
-        : Math.max(root.cardCorner, Math.min(root.bodyWidth - width - root.cardCorner, root.tailCenter - width / 2)))
+        : Math.max(root.cardCorner, Math.min(root.bodyWidth - width - root.cardCorner, root.animatedTailCenter - width / 2)))
     y: root.edge === "top" ? 0
       : (root.edge === "bottom"
-        ? root.bodyHeight - 1
-        : Math.max(root.cardCorner, Math.min(root.bodyHeight - height - root.cardCorner, root.tailCenter - height / 2)))
+        ? root.animatedBodyHeight - 1
+        : Math.max(root.cardCorner, Math.min(root.animatedBodyHeight - height - root.cardCorner, root.animatedTailCenter - height / 2)))
     width: root.horizontalEdge ? root.tailHeight : root.tailLength + 1
     height: root.horizontalEdge ? root.tailLength + 1 : root.tailHeight
     preferredRendererType: Shape.CurveRenderer
 
     ShapePath {
       strokeWidth: -1
-      fillColor: "#000000"
+      fillColor: root.surfaceColor
+      Behavior on fillColor { ColorAnimation { duration: root.animationsEnabled ? 220 : 0 } }
       PathSvg { path: root.tailPath() }
     }
   }
@@ -152,9 +167,10 @@ Item {
     x: root.bodyX
     y: root.bodyY
     width: root.bodyWidth
-    height: root.bodyHeight
+    height: root.animatedBodyHeight
     radius: root.cardCorner
-    color: "#000000"
+    color: root.surfaceColor
+    Behavior on color { ColorAnimation { duration: root.animationsEnabled ? 220 : 0 } }
   }
 
   Flickable {
@@ -162,7 +178,7 @@ Item {
     x: root.bodyX + root.cardPadding
     y: root.bodyY + root.cardPadding
     width: root.bodyWidth - 2 * root.cardPadding
-    height: Math.max(1, root.bodyHeight - 2 * root.cardPadding)
+    height: Math.max(1, root.animatedBodyHeight - 2 * root.cardPadding)
     contentWidth: width
     contentHeight: content.implicitHeight
     clip: true

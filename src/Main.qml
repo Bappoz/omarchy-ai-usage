@@ -131,6 +131,12 @@ Item {
 
   AppLauncher { id: appLauncher }
 
+  DesktopMonitor {
+    id: desktopMonitor
+    enabled: !providerStore.previewMode
+      && String(root.preferenceValues.autoHideMode || "onFullscreen") !== "never"
+  }
+
   Preferences {
     id: preferenceStore
     shell: root.shell
@@ -157,6 +163,9 @@ Item {
       sessions: sessionStore.sessions
       sessionsFailed: sessionStore.failed
       latestEvent: root.latestEvent
+      desktopFullscreen: desktopMonitor.activeFullscreen
+      desktopMonitorName: desktopMonitor.activeMonitorName
+      desktopWindowBounds: desktopMonitor.activeWindowBounds
       onSessionFocusRequested: function(session) { sessionStore.focus(session) }
       onSoundPreviewRequested: function(sound) { desktopFeedback.send("claude", "preview", false, sound) }
       onInsightsRequested: function(providerId) { insightsStore.refresh(providerId) }

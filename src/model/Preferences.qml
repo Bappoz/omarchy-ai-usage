@@ -25,6 +25,7 @@ QtObject {
       "monitor": "focused",
       "size": "medium",
       "autoHide": true,
+      "autoHideMode": "onFullscreen",
       "expandBehavior": "hover",
       "pollingInterval": 900,
       "showProviderLabel": false,
@@ -32,6 +33,8 @@ QtObject {
       "showResetTimer": true,
       "animations": true,
       "accentColor": "auto",
+      "colorTransitionStyle": "hardStep",
+      "surfaceOpacity": 1.0,
       "showInsights": true,
       "showSessions": true,
       "peekOnEvent": true,
@@ -67,6 +70,7 @@ QtObject {
     var edges = ["top", "right", "bottom", "left"]
     var sizes = ["small", "medium", "large"]
     var behaviors = ["hover", "click"]
+    var autoHideModes = ["never", "onFullscreen", "onOverlap"]
     var providers = plainObject(raw.enabledProviders) ? raw.enabledProviders : ({})
     var providerColors = plainObject(raw.providerColors) ? raw.providerColors : ({})
     var muted = plainObject(raw.mutedAlerts) ? raw.mutedAlerts : ({})
@@ -74,6 +78,7 @@ QtObject {
     var edge = String(raw.edge || "").toLowerCase()
     var size = String(raw.size || "").toLowerCase()
     var behavior = String(raw.expandBehavior || "").toLowerCase()
+    var hideMode = String(raw.autoHideMode || "")
 
     return {
       "settingsVersion": 1,
@@ -82,6 +87,7 @@ QtObject {
       "monitor": String(raw.monitor || base.monitor).trim() || base.monitor,
       "size": sizes.indexOf(size) >= 0 ? size : base.size,
       "autoHide": raw.autoHide === undefined ? base.autoHide : raw.autoHide === true,
+      "autoHideMode": autoHideModes.indexOf(hideMode) >= 0 ? hideMode : base.autoHideMode,
       "expandBehavior": behaviors.indexOf(behavior) >= 0 ? behavior : base.expandBehavior,
       "pollingInterval": Math.round(clamp(raw.pollingInterval, 60, 3600, base.pollingInterval)),
       "showProviderLabel": false,
@@ -89,6 +95,8 @@ QtObject {
       "showResetTimer": raw.showResetTimer === undefined ? base.showResetTimer : raw.showResetTimer === true,
       "animations": raw.animations === undefined ? base.animations : raw.animations === true,
       "accentColor": Usage.validAccent(raw.accentColor),
+      "colorTransitionStyle": raw.colorTransitionStyle === "ramp" ? "ramp" : "hardStep",
+      "surfaceOpacity": Math.round(clamp(raw.surfaceOpacity, 0.72, 1.0, base.surfaceOpacity) * 100) / 100,
       "providerColors": {
         "claude": providerColors.claude === undefined ? base.providerColors.claude : Usage.validAccent(providerColors.claude),
         "codex": providerColors.codex === undefined ? base.providerColors.codex : Usage.validAccent(providerColors.codex),

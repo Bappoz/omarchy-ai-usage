@@ -185,6 +185,9 @@ class UsageHelpersTests(unittest.TestCase):
         self.assertEqual(self.run_js('usageColor(90, "auto")'), "#ff3f00")
         self.assertEqual(self.run_js('usageColor(90, "#7c9cff")'), "#7c9cff")
         self.assertEqual(self.run_js('usageColor(null, "#7c9cff")'), "#808080")
+        self.assertEqual(self.run_js('usageColor(0, "auto", "auto", "ramp")'), "#00ff88")
+        self.assertEqual(self.run_js('usageColor(55, "auto", "auto", "ramp")'), "#f2ff00")
+        self.assertEqual(self.run_js('usageColor(90, "auto", "auto", "ramp")'), "#ff3f00")
 
     def test_pace_projects_limit_before_reset(self) -> None:
         window = '{usedPercent: 60, resetAt: "2026-01-01T05:00:00Z", durationMinutes: 300}'

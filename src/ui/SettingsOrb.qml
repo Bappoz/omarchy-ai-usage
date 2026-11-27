@@ -6,6 +6,7 @@ Item {
   id: root
   property string edge: "right"
   property real uiScale: 1
+  property real surfaceOpacity: 1.0
   property bool animationsEnabled: true
   property bool revealed: false
   property bool selected: false
@@ -29,8 +30,13 @@ Item {
   Behavior on wake {
     NumberAnimation { duration: root.animationsEnabled ? (root.wake > 0 ? 360 : 500) : 0; easing.type: Easing.InOutCubic }
   }
+  // Absorb back into the notch with NotchMotion.merge (ease-in 200ms) so the
+  // orb finishes entering the black before the silhouette begins folding shut.
   Behavior on separation {
-    NumberAnimation { duration: root.animationsEnabled ? (root.revealed ? 480 : 180) : 0; easing.type: Easing.OutCubic }
+    NumberAnimation {
+      duration: root.animationsEnabled ? (root.revealed ? 440 : 200) : 0
+      easing.type: root.revealed ? Easing.OutCubic : Easing.InCubic
+    }
   }
 
   // A round-ended line grows from the arc's middle into the disc itself.
@@ -65,7 +71,7 @@ Item {
     anchors.fill: parent
     preferredRendererType: Shape.CurveRenderer
     ShapePath {
-      strokeColor: "#000000"
+      strokeColor: root.surfaceOpacity >= 0.999 ? "#000000" : Qt.rgba(0, 0, 0, Math.max(0.5, Math.min(1, root.surfaceOpacity)))
       strokeWidth: (root.stroke + (root.discDiameter - root.stroke) * root.wake) * root.separation
       fillColor: "transparent"
       capStyle: ShapePath.RoundCap

@@ -124,6 +124,9 @@ Use the general settings orb outside the notch. Choices apply live and are saved
 | Size | Small, medium, large | Medium | Notch, card, type, and ring scale |
 | Open behavior | Hover, click | Hover | How the rail and card open |
 | Auto-hide | On, off | On | Whether an idle rail collapses to the edge pill |
+| Fold for desktop | On full-screen, on overlap, never | On full-screen | Tuck the notch into the edge while a full-screen app (or a window covering it) is active |
+| Surface | Solid black, dark glass, tinted | Solid black | Opacity of the notch, card and activity panel |
+| Color style | Hard step, color ramp | Hard step | Usage colors jump at 50/70% or blend continuously |
 | Refresh interval | 5, 15, 30, 60 minutes | 15 minutes | Hidden fallback reread; a visible card requests fresh data every 30 seconds |
 | Claude / Codex / Antigravity / Cursor | On, off | On | Which live providers appear |
 | Percentage / reset time | Percentage always shown; reset time on/off | On | CodeNotch compact readings |
@@ -168,7 +171,9 @@ For an exact connector or a continuous position, edit the plugin entry in `~/.co
 | --- | --- | --- |
 | `omarchy.agents` records in `~/.local/state/omarchy/agents/usage/` | Quota windows, percentages, reset times | Read-only watch; the built-in widget is the single writer |
 | `omarchy-shell omarchy.agents refresh` | Fresh data when a card opens and every 30 seconds while visible | Fixed IPC request, single-flight, 15-second cooldown |
-| Orca `account list --json` | Antigravity and Cursor quota windows | Local CLI output is normalized in memory; only quota percentages, reset times and plan labels reach the UI |
+| Antigravity language server (`127.0.0.1`) or official `agy --print /usage` | Antigravity quota windows, without Orca | Same-user loopback RPC using the server's own CSRF token, else the CLI in a bounded PTY; 5-minute private cache, stale fallback; Orca is an optional last resort |
+| Orca `account list --json` | Cursor quota windows | Local CLI output is normalized in memory; only quota percentages, reset times and plan labels reach the UI |
+| Hyprland events + `hyprctl activewindow -j` | Fold during full-screen apps or overlapping windows | Event-driven, debounced; only fullscreen flag and geometry are used; off with `autoHideMode: "never"` |
 | Local session logs (`~/.claude/projects`, `~/.codex/sessions`) | Activity panel | Read-only, only while the panel is visible, aggregated in a helper; can be turned off |
 | Claude session registry, bounded Claude/Codex log tails, same-user `/proc` metadata | Live sessions and event peeks | One shared local watcher, two-second cadence, unchanged tails cached; disable with `showSessions: false` |
 | Orca `bot list --json` and `~/.orca/bots/<name>/bot.json` | Hide sessions of paused Orca bots | Queried only when a session runs inside an Orca bot home, cached 10 seconds; if Orca is unavailable nothing is hidden |
@@ -176,7 +181,7 @@ For an exact connector or a continuous position, edit the plugin entry in `~/.co
 | Freedesktop notifications and sound events | Quota/session alerts | Optional notifications; independent sounds; missing services fail quietly |
 | `gtk-launch` / `omarchy-launch-webapp` | Opening the app on logo click | Fixed commands, no user-controlled arguments |
 
-Authentication stays with provider clients. Claude and Codex quotas come from Omarchy; Antigravity and Cursor quotas come from Orca. Gemini is intentionally not displayed as a separate provider. See [Provider feasibility](docs/provider-feasibility.md) for details.
+Authentication stays with provider clients. Claude and Codex quotas come from Omarchy; Antigravity quota comes from Antigravity itself (its running language server or the `agy` CLI), so Orca does not need to be open; Cursor quota comes from Orca. Gemini is intentionally not displayed as a separate provider. See [Provider feasibility](docs/provider-feasibility.md) for details.
 
 ## Troubleshooting
 
@@ -222,7 +227,7 @@ Probe the helpers directly:
 
 ```sh
 python helpers/omarchy_agent_provider.py --provider claude   # normalized quota snapshot
-python helpers/orca_usage_provider.py --provider antigravity # Orca quota snapshot
+python helpers/antigravity_provider.py                        # Antigravity quota (language server / agy CLI)
 python helpers/orca_usage_provider.py --provider cursor      # Orca quota snapshot
 python helpers/insights_provider.py --provider claude        # activity aggregates
 ```
@@ -248,7 +253,7 @@ Marketplace maintainers validate the current public commit before approval; see 
 
 Omarchy plugins are not sandboxed, so this one keeps a narrow, documented data boundary:
 
-- It never reads credential files, tokens, browser storage, or stores raw provider responses. It never starts Claude Code, Codex, or the Omarchy usage collector. It queries Orca's local quota CLI for Antigravity and Cursor and retains only sanitized quota fields. It launches an app only when you click its card logo.
+- It never reads credential files, bearer tokens or browser storage, and never stores raw provider responses. The one narrow exception: to ask a running Antigravity language server for quota, it reads that server's loopback CSRF token from its same-user command line and uses it only for a `127.0.0.1` request. It never starts Claude Code, Codex, or the Omarchy usage collector; it may run the official `agy` CLI for a quota report. It queries Orca's local quota CLI for Cursor and retains only sanitized quota fields. It launches an app only when you click its card logo.
 - Quota snapshots contain usage windows, percentages, reset times, and an optional plan label, never tokens or account identifiers.
 - Session logs contain conversations. The activity helper emits only timestamp/model/count aggregates; prompts and tool output never leave it. Disable it with `showInsights: false`. The separate live-session watcher reads registry metadata and bounded cached log tails, emitting a sanitized session name, workspace basename, state, hashed handle and same-user process identity. It never emits prompts, tool arguments, responses, full paths or credentials. Disable it independently with `showSessions: false`.
 - The repository contains no real provider output or account data.

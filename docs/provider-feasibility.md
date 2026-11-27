@@ -6,13 +6,14 @@ Live providers must expose a stable, authenticated and machine-readable quota
 window with both consumption and a ceiling/reset. Omarchy AI Usage does not
 read credential files, browser storage or private web endpoints, and it does
 not turn token counts into invented quota percentages. Claude and Codex come
-from `omarchy.agents`; Antigravity and Cursor quota windows are read from Orca's
-local `account list --json` interface. Gemini is not shown as a separate
-provider card.
+from `omarchy.agents`; Antigravity quota windows come from Antigravity's own
+local language server or official `agy` CLI (Orca optional); Cursor quota
+windows are read from Orca's local `account list --json` interface. Gemini is
+not shown as a separate provider card.
 
 The installed Omarchy release currently ships official usage collectors for
-Claude, Codex and Fireworks. The plugin also uses Orca's local quota interface
-for Antigravity and Cursor.
+Claude, Codex and Fireworks. The plugin reads Antigravity directly and uses
+Orca's local quota interface for Cursor.
 The following candidates remain unavailable.
 
 ## GitHub Copilot
@@ -42,15 +43,22 @@ card remains the only Google quota surface in this plugin.
 
 Source: [Google's transition announcement](https://developers.googleblog.com/an-important-update-transitioning-gemini-cli-to-antigravity-cli/).
 
-Decision: do not show a separate Gemini provider. The Antigravity card uses
-the quota windows Orca reports for the Antigravity account. The legacy Gemini
-CLI may continue to offer API-key or Vertex AI modes, but those do not provide
-this subscription quota view.
+Decision: do not show a separate Gemini provider. The Antigravity card asks
+Antigravity itself: first its running language server over loopback
+(`RetrieveUserQuotaSummary`, the figure Antigravity's own panel shows), then
+the official `agy --print /usage` CLI, which works with the IDE and Orca
+closed. Orca's account listing is only a fallback. The approach follows
+CodeNotch's Antigravity adapter. The legacy Gemini CLI may continue to offer
+API-key or Vertex AI modes, but those do not provide this subscription quota
+view.
 
 ## Cursor
 
 Cursor quota windows are read from Orca's local account listing. The plugin
-does not read Cursor credentials or call undocumented Cursor endpoints.
+does not read Cursor credentials or call undocumented Cursor endpoints, so
+Cursor still requires Orca. A direct reader would have to borrow Cursor's
+session token from its state database; that was evaluated and deliberately not
+shipped.
 Per-request token totals are not shown because there is no supported local
 session-log source in this integration.
 

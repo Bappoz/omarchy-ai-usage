@@ -33,6 +33,19 @@ Column {
     return preferences.expandBehavior === "click" ? "Click" : "Hover"
   }
 
+  function autoHideModeLabel(value) {
+    if (value === "never") return "Never"
+    if (value === "onOverlap") return "On overlap"
+    return "On full-screen"
+  }
+
+  function surfaceLabel(opacity) {
+    var value = Number(opacity === undefined ? 1.0 : opacity)
+    if (value <= 0.8) return "Tinted"
+    if (value <= 0.92) return "Dark glass"
+    return "Solid black"
+  }
+
   function rows() {
     var p = preferences || ({})
     var providers = p.enabledProviders || ({})
@@ -55,10 +68,13 @@ Column {
       { key: "monitor", label: "Display", value: p.monitor === "all" ? "All" : (p.monitor === "focused" ? "Focused" : String(p.monitor || "Focused")) },
       { key: "size", label: "Size", value: title(p.size || "medium") },
       { key: "openMode", label: "Open", value: openMode() },
+      { key: "autoHideMode", label: "Auto-hide", value: autoHideModeLabel(p.autoHideMode) },
+      { key: "surfaceOpacity", label: "Surface", value: surfaceLabel(p.surfaceOpacity) },
       { key: "pollingInterval", label: "Refresh", value: Math.round(Number(p.pollingInterval || 900) / 60) + " min" },
       { key: "showResetTimer", label: "Reset time", value: p.showResetTimer === false ? "Off" : "On" },
       { key: "resetTimeStyle", label: "Reset display", value: p.resetTimeStyle === "date" ? "Reset date" : "Time remaining" },
       { key: "accentColor", label: "Accent color", value: Usage.validAccent(p.accentColor) === "auto" ? "Auto" : Usage.validAccent(p.accentColor).toUpperCase(), swatch: Usage.validAccent(p.accentColor) },
+      { key: "colorTransitionStyle", label: "Color style", value: p.colorTransitionStyle === "ramp" ? "Color ramp" : "Hard step" },
       { key: "showInsights", label: "Insights panel", value: p.showInsights === false ? "Off" : "On" },
       { key: "showSessions", label: "Live sessions", value: p.showSessions === false ? "Off" : "On" },
       { key: "busyIndicator", label: "Working indicator", value: p.busyIndicator === "breath" ? "Breathing disc" : "Spinning arc" },
@@ -137,6 +153,13 @@ Column {
       }
     }
     else if (key === "accentColor") preferenceChanged(key, nextIn(Usage.PRESETS, Usage.validAccent(p.accentColor)))
+    else if (key === "autoHideMode") preferenceChanged(key, nextIn(["onFullscreen", "onOverlap", "never"], p.autoHideMode || "onFullscreen"))
+    else if (key === "surfaceOpacity") {
+      var curOp = Number(p.surfaceOpacity === undefined ? 1.0 : p.surfaceOpacity)
+      var nextOp = curOp > 0.92 ? 0.88 : (curOp > 0.8 ? 0.78 : 1.0)
+      preferenceChanged(key, nextOp)
+    }
+    else if (key === "colorTransitionStyle") preferenceChanged(key, p.colorTransitionStyle === "ramp" ? "hardStep" : "ramp")
     else if (key === "resetTimeStyle") preferenceChanged(key, p.resetTimeStyle === "date" ? "remaining" : "date")
     else if (key === "busyIndicator") preferenceChanged(key, p.busyIndicator === "breath" ? "arc" : "breath")
     else if (key === "peekDuration") preferenceChanged(key, nextIn([3, 5, 10], Number(p.peekDuration || 5)))
@@ -160,6 +183,7 @@ Column {
         required property string modelData
         width: root.width / 4; height: 28 * root.uiScale; radius: 7 * root.uiScale
         color: root.category === modelData ? "#2d2d2d" : "transparent"
+        Behavior on color { ColorAnimation { duration: root.animationsEnabled ? 150 : 0 } }
         Text {
           anchors.centerIn: parent; text: parent.modelData
           font.pixelSize: 9 * root.uiScale; color: root.category === parent.modelData ? "#ffffff" : "#808080"
@@ -185,6 +209,7 @@ Column {
       height: 27 * root.uiScale
       radius: 8 * root.uiScale
       color: rowMouse.containsMouse ? "#1d1d1d" : "transparent"
+      Behavior on color { ColorAnimation { duration: root.animationsEnabled ? 120 : 0 } }
 
       RowLayout {
         anchors.fill: parent

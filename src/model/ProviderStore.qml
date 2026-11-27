@@ -116,8 +116,8 @@ QtObject {
   property ProviderRunner antigravityRunner: ProviderRunner {
     providerId: "antigravity"
     displayName: "Antigravity"
-    helperFile: "orca_usage_provider.py"
-    helperArguments: ["--provider", "antigravity"]
+    helperFile: "antigravity_provider.py"
+    helperArguments: []
     enabled: !root.previewMode && root.isEnabled("antigravity")
     pollingIntervalSeconds: root.pollingIntervalSeconds
   }

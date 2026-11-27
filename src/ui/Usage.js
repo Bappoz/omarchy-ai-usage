@@ -8,13 +8,36 @@ function validAccent(value) {
   return /^#[0-9a-f]{6}$/.test(text) ? text : AUTO
 }
 
+function hexChannel(value) {
+  var clamped = Math.max(0, Math.min(255, Math.round(value)))
+  return (clamped < 16 ? "0" : "") + clamped.toString(16)
+}
+
+function lerpColor(a, b, t) {
+  var k = Math.max(0, Math.min(1, t))
+  return "#" + hexChannel(a[0] + (b[0] - a[0]) * k)
+    + hexChannel(a[1] + (b[1] - a[1]) * k)
+    + hexChannel(a[2] + (b[2] - a[2]) * k)
+}
+
+// Continuous blend across 0..100%: ample green -> watch yellow (55%) -> critical red (90%+).
+function rampColor(used) {
+  var green = [0x00, 0xff, 0x88]
+  var yellow = [0xf2, 0xff, 0x00]
+  var red = [0xff, 0x3f, 0x00]
+  var p = Math.max(0, Math.min(100, Number(used) || 0))
+  if (p <= 55) return lerpColor(green, yellow, p / 55)
+  return lerpColor(yellow, red, (p - 55) / 35)
+}
+
 // A provider hex takes precedence, then the global accent, then the usage scale.
-function usageColor(used, accent, providerAccentValue) {
+function usageColor(used, accent, providerAccentValue, transitionStyle) {
   if (used === null || used === undefined) return "#808080"
   var providerAccent = validAccent(providerAccentValue)
   var custom = validAccent(accent)
   if (providerAccent !== AUTO) return providerAccent
   if (custom !== AUTO) return custom
+  if (transitionStyle === "ramp") return rampColor(used)
   return used < 50 ? "#00ff88" : (used < 70 ? "#f2ff00" : "#ff3f00")
 }
 

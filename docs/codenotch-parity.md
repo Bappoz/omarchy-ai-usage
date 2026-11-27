@@ -28,14 +28,14 @@ Reference: [CodeNotch 1.25.0, 835550a](https://github.com/vinzdg/codenotch/tree/
 | Reference capability | Current status and reason |
 | --- | --- |
 | Financial credits, reset grants and account balances | Not available from the supported `omarchy.agents` quota record. Token counts are not a price or credit balance. No fabricated amount or redemption action is shown. |
-| Cursor/Antigravity live session state | Quotas remain supported through Orca; live session metadata is not implemented for them. The card explicitly says so. |
+| Cursor/Antigravity live session state | Antigravity quota is read directly (language server or `agy` CLI); Cursor quota remains through Orca. Live session metadata is not implemented for either. The card explicitly says so. |
 | Additional cloud providers, custom endpoints, Ollama, LM Studio, oMLX | Not implemented in this port. These require separate normalized adapters and verified source contracts. The four existing providers are not substitutes for those integrations. |
 | Multiple profiles/accounts per provider | Not implemented. Respects `CLAUDE_CONFIG_DIR` / `CODEX_HOME` for the selected profile; does not discover or open other account credentials. |
 | Codex conversation grouping and desktop database activity | Root CLI rollouts supported; known helper rollouts are excluded to avoid false completion. No desktop SQLite reader or parent-conversation aggregation yet. |
 | Claude moved-worktree transcript fallback | Direct cwd-derived transcript path supported. Does not scan unrelated project folders to recover moved transcripts. Registry states remain authoritative. |
 | Phone pairing, remote-host monitoring | Not implemented; no local server, pairing keys or exposed network port are introduced. |
 | macOS hardware notch, Dock/menu bar, AppKit focus, Sparkle | Platform-specific. Omarchy layer shell, Hyprland focus and Omarchy plugin updates serve the native Linux roles. |
-| Completely hidden visibility mode, full-screen suppression, custom native settings window | Not implemented; hover/click/always-open modes and bounded in-card settings remain. |
+| Completely hidden visibility mode, custom native settings window | Not implemented; hover/click/always-open modes and bounded in-card settings remain. Full-screen and overlap folding are implemented through Hyprland events (`autoHideMode`). |
 
 ## Verification
 

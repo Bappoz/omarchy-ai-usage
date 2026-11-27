@@ -25,6 +25,9 @@ PanelWindow {
   property bool sessionsFailed: false
   property var latestEvent: null
   property var peekEvent: null
+  property bool desktopFullscreen: false
+  property string desktopMonitorName: ""
+  property var desktopWindowBounds: null
   readonly property bool peekActive: peekTimer.running
   readonly property var displaySessions: previewMode ? [
     { id: "aaaaaaaaaaaaaaaaaaaaaaaa", providerId: "claude", name: "Build workspace", detail: "Terminal · example", state: "busy", pid: null, started: null },
@@ -47,13 +50,24 @@ PanelWindow {
     return list.sort(function(a, b) { return order.indexOf(a.id) - order.indexOf(b.id) })
   }
   readonly property bool autoHide: preferences.autoHide !== false
+  readonly property string autoHideMode: String(preferences.autoHideMode || "onFullscreen")
+  readonly property real surfaceOpacity: preferences.surfaceOpacity === undefined ? 1.0 : Number(preferences.surfaceOpacity)
+  readonly property string colorTransitionStyle: String(preferences.colorTransitionStyle || "hardStep")
   readonly property string expandBehavior: String(preferences.expandBehavior || "hover")
   readonly property real sizeScale: preferences.size === "small" ? 0.85
     : (preferences.size === "large" ? 1.2 : 1)
   readonly property bool motionEnabled: preferences.animations !== false
     && Quickshell.env("OMARCHY_REDUCED_MOTION") !== "1"
   readonly property bool hoverExpansion: autoHide && expandBehavior === "hover"
-  readonly property bool unfolded: !autoHide || forcedOpen || heldOpen || settingsOpen || contextOpen || peekActive || notch.orbSettling
+  readonly property bool screenMatchesDesktop: targetScreen !== null
+    && (desktopMonitorName === "" || String(targetScreen.name || "") === desktopMonitorName)
+  readonly property bool desktopSuppressed: !previewMode && !forcedOpen && !heldOpen
+    && !settingsOpen && !contextOpen && !peekActive
+    && !hoveringSurface && !hoveringProvider && !hoveringCard && !hoveringPanel
+    && screenMatchesDesktop
+    && ((autoHideMode === "onFullscreen" && desktopFullscreen)
+        || (autoHideMode === "onOverlap" && (desktopFullscreen || windowOverlapsNotch())))
+  readonly property bool unfolded: (!autoHide && !desktopSuppressed) || forcedOpen || heldOpen || settingsOpen || contextOpen || peekActive || notch.orbSettling
     || (hoverExpansion && (hoveringSurface || hoveringProvider || hoveringCard || hoveringPanel || hoveredIndex >= 0))
   readonly property bool showCard: settingsOpen || contextOpen
     || (hoveredIndex >= 0 && hoveredIndex < providers.length && unfolded)
@@ -75,6 +89,18 @@ PanelWindow {
     contextOpen = false
     settingsOpen = !settingsOpen
     if (settingsOpen && hoveredIndex < 0 && providers.length) hoveredIndex = 0
+  }
+
+  function windowOverlapsNotch() {
+    var b = root.desktopWindowBounds
+    if (!b || !root.targetScreen) return false
+    var sx = Number(root.targetScreen.x || 0)
+    var sy = Number(root.targetScreen.y || 0)
+    var nx = sx + notch.x + notch.surfaceX
+    var ny = sy + notch.y + notch.surfaceY
+    var nw = notch.surfaceWidth
+    var nh = notch.surfaceHeight
+    return b.x < nx + nw && b.x + b.width > nx && b.y < ny + nh && b.y + b.height > ny
   }
 
   onLatestEventChanged: {
@@ -388,6 +414,9 @@ PanelWindow {
     settingsOpen: root.settingsOpen
     accentColor: String(root.preferences.accentColor || "auto")
     providerColors: root.preferences.providerColors || ({})
+    colorTransitionStyle: root.colorTransitionStyle
+    surfaceOpacity: root.surfaceOpacity
+    suppressed: root.desktopSuppressed
     sessions: root.preferences.showSessions === false ? [] : root.displaySessions
     busyIndicator: String(root.preferences.busyIndicator || "arc")
     onSettingsRequested: root.openSettings()
@@ -448,6 +477,8 @@ PanelWindow {
     visible: root.showCard || opacity > 0
     opacity: root.showCard ? 1 : 0
     scale: root.showCard ? 1 : 0.92
+    transformOrigin: root.edge === "right" ? Item.Right
+      : (root.edge === "left" ? Item.Left : (root.edge === "top" ? Item.Top : Item.Bottom))
     edge: root.edge
     tailCenter: root.horizontalEdge
       ? notch.x + notch.providerCenter(root.hoveredIndex) - x
@@ -461,6 +492,8 @@ PanelWindow {
     showResetTimer: root.preferences.showResetTimer !== false
     accentColor: String(root.preferences.accentColor || "auto")
     providerColors: root.preferences.providerColors || ({})
+    colorTransitionStyle: root.colorTransitionStyle
+    surfaceOpacity: root.surfaceOpacity
     settingsOpen: root.settingsOpen
     contextOpen: root.contextOpen
     heldOpen: root.heldOpen
@@ -487,18 +520,18 @@ PanelWindow {
 
     Behavior on x {
       enabled: root.motionEnabled
-      SpringAnimation { spring: 3.2; damping: 0.45; epsilon: 0.1 }
+      SpringAnimation { spring: 3.6; damping: 0.52; epsilon: 0.1 }
     }
     Behavior on y {
       enabled: root.motionEnabled
-      SpringAnimation { spring: 3.2; damping: 0.45; epsilon: 0.1 }
+      SpringAnimation { spring: 3.6; damping: 0.52; epsilon: 0.1 }
     }
     Behavior on opacity {
       NumberAnimation { duration: root.motionEnabled ? 180 : 0; easing.type: Easing.OutCubic }
     }
     Behavior on scale {
       enabled: root.motionEnabled
-      SpringAnimation { spring: 3.2; damping: 0.3; epsilon: 0.001 }
+      SpringAnimation { spring: 4.0; damping: 0.38; epsilon: 0.001 }
     }
   }
 
@@ -524,18 +557,27 @@ PanelWindow {
     animationsEnabled: root.motionEnabled
     accentColor: String(root.preferences.accentColor || "auto")
     providerColors: root.preferences.providerColors || ({})
+    surfaceOpacity: root.surfaceOpacity
     onPanelHovered: function(hovered) {
       root.hoveringPanel = hovered
       if (hovered) hoverGrace.stop()
       else root.scheduleClose()
     }
 
+    Behavior on x {
+      enabled: root.motionEnabled
+      SpringAnimation { spring: 3.6; damping: 0.52; epsilon: 0.1 }
+    }
+    Behavior on y {
+      enabled: root.motionEnabled
+      SpringAnimation { spring: 3.6; damping: 0.52; epsilon: 0.1 }
+    }
     Behavior on opacity {
       NumberAnimation { duration: root.motionEnabled ? 200 : 0; easing.type: Easing.OutCubic }
     }
     Behavior on scale {
       enabled: root.motionEnabled
-      SpringAnimation { spring: 3.2; damping: 0.3; epsilon: 0.001 }
+      SpringAnimation { spring: 3.6; damping: 0.36; epsilon: 0.001 }
     }
   }
 

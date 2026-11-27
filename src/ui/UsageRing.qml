@@ -16,6 +16,7 @@ Item {
   property real uiScale: 1
   property string accentColor: "auto"
   property string providerColor: "auto"
+  property string colorTransitionStyle: "hardStep"
   property string accessibleName: "Usage"
   property string activityState: "idle"
   property string busyIndicator: "arc"
@@ -30,7 +31,7 @@ Item {
   readonly property real progressStroke: 8 * designScale
   readonly property real ringRadius: Math.max(1, (Math.min(width, height) - trackStroke) / 2)
   readonly property color trackColor: "#303030"
-  property color progressColor: Usage.usageColor(safeUsed, accentColor, providerColor)
+  property color progressColor: Usage.usageColor(safeUsed, accentColor, providerColor, colorTransitionStyle)
 
   Accessible.role: Accessible.ProgressBar
   Accessible.name: root.accessibleName

@@ -1,7 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.13.0
 
+- Read Antigravity quota without Orca: first from Antigravity's running language server over loopback (`RetrieveUserQuotaSummary`, CSRF token taken from the same-user process and kept in memory), then from the official `agy --print /usage` CLI in a bounded PTY with auto-update disabled. Orca is now only an optional fallback; a private 5-minute cache avoids repeated CLI runs and a last-known reading is shown as stale after transient failures. Cursor quota still comes from Orca.
+- Fold the notch into the screen edge during full-screen apps (`autoHideMode: onFullscreen`, default) or when the focused window covers it (`onOverlap`), driven by Hyprland events; hover, Keep open, settings and peeks still win.
+- Add `surfaceOpacity` (solid black, dark glass, tinted) applied consistently to notch, card, tail, orb and activity panel, and `colorTransitionStyle` (`hardStep` or a continuous `ramp`).
+- Smoother motion after CodeNotch's `NotchMotion`: a slight liquid overshoot on unfold, spring-animated card height and tail when switching providers or settings tabs, the activity panel gliding with the card, edge-anchored card scaling and an ease-in orb merge before the notch folds.
+- Document the new data access in `SECURITY.md`, `README.md` and provider notes.
 - Hide live sessions that belong to a paused Orca bot (an agent running in `~/.orca/bots/<name>`, matched through the id in its `bot.json`); they return once the bot is resumed. Orca's `bot list --json` is queried lazily, cached for 10 seconds, and any failure hides nothing.
 - Remove settings controls from individual provider cards; use one general settings orb outside the trailing flare. Morph the black arc into the black gear disc on hover and reverse on leave, with click rotation and a dedicated input region.
 - Always show percentages on compact cells, overriding legacy name/hidden-percent preferences, and restore CodeNotch cap-height proportions.
